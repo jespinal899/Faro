@@ -1,0 +1,38 @@
+# Faro — Plataforma de Analítica Inteligente de Ventas
+# Entorno de DESARROLLO local.
+# Producción usa Neon (PostgreSQL administrado); aquí replicamos la misma
+# versión de PostgreSQL para que lo que funcione local funcione en Neon.
+#
+# Uso:
+#   docker compose up -d        -> levanta la base
+#   docker compose ps           -> ver estado (debe decir "healthy")
+#   docker compose down         -> apaga (los datos se conservan en el volumen)
+#   docker compose down -v      -> apaga y BORRA los datos (reinicio total)
+
+name: faro
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: faro-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
+      POSTGRES_DB: wwi_oltp          # base operacional (fuente)
+      TZ: UTC
+    ports:
+      # 5433 en el host porque el 5432 lo usa otro proyecto en esta máquina
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Scripts que se ejecutan SOLO la primera vez que se crea el volumen
+      - ./database/scripts/local-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d wwi_oltp"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  pgdata:

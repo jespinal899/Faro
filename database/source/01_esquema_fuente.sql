@@ -259,6 +259,76 @@ CREATE TABLE IF NOT EXISTS sales.invoice_lines (
 COMMENT ON TABLE sales.invoice_lines IS
     'Líneas de factura: la VENTA realizada. extended_price incluye impuestos (neto = extended_price - tax_amount).';
 
+-- ===================== descripción de columnas ======================
+-- Solo las columnas cuyo significado no es evidente por el nombre.
+
+COMMENT ON COLUMN application.people.is_salesperson IS 'TRUE si la persona es vendedor (aparece como salesperson en pedidos/facturas).';
+COMMENT ON COLUMN application.people.preferred_name IS 'Nombre corto con el que se conoce a la persona.';
+COMMENT ON COLUMN application.state_provinces.sales_territory IS 'Territorio comercial al que pertenece el estado (agrupación de ventas).';
+COMMENT ON COLUMN application.cities.latest_recorded_population IS 'Última población registrada de la ciudad.';
+
+COMMENT ON COLUMN warehouse.stock_items.unit_package_id IS 'Empaque en el que se vende una unidad.';
+COMMENT ON COLUMN warehouse.stock_items.outer_package_id IS 'Empaque exterior (caja) en el que se despacha.';
+COMMENT ON COLUMN warehouse.stock_items.quantity_per_outer IS 'Unidades que contiene un empaque exterior.';
+COMMENT ON COLUMN warehouse.stock_items.lead_time_days IS 'Días de reposición del proveedor.';
+COMMENT ON COLUMN warehouse.stock_items.is_chiller_stock IS 'TRUE si requiere refrigeración.';
+COMMENT ON COLUMN warehouse.stock_items.tax_rate IS 'Tasa de impuesto en porcentaje (15.000 = 15 %).';
+COMMENT ON COLUMN warehouse.stock_items.unit_price IS 'Precio de lista vigente por unidad, sin impuestos.';
+COMMENT ON COLUMN warehouse.stock_items.recommended_retail_price IS 'Precio de venta al público sugerido.';
+COMMENT ON COLUMN warehouse.stock_items.typical_weight_per_unit IS 'Peso típico por unidad (kg).';
+
+COMMENT ON COLUMN sales.customers.bill_to_customer_id IS 'Cliente al que se factura (p. ej. la casa matriz de una cadena). Puede ser el mismo cliente.';
+COMMENT ON COLUMN sales.customers.buying_group_id IS 'Grupo de compra (cadena). NULL = cliente independiente.';
+COMMENT ON COLUMN sales.customers.credit_limit IS 'Límite de crédito. NULL = sin límite definido.';
+COMMENT ON COLUMN sales.customers.standard_discount_percentage IS 'Descuento estándar del cliente, en porcentaje.';
+COMMENT ON COLUMN sales.customers.is_on_credit_hold IS 'TRUE si el crédito del cliente está suspendido.';
+COMMENT ON COLUMN sales.customers.payment_days IS 'Días de plazo para pagar una factura.';
+COMMENT ON COLUMN sales.customers.account_opened_date IS 'Fecha de apertura de la cuenta del cliente.';
+
+COMMENT ON COLUMN sales.orders.backorder_order_id IS 'Pedido pendiente generado cuando no hubo stock suficiente para este pedido.';
+COMMENT ON COLUMN sales.orders.is_undersupply_backordered IS 'TRUE si los faltantes de stock se convierten en un pedido pendiente.';
+COMMENT ON COLUMN sales.orders.expected_delivery_date IS 'Fecha de entrega comprometida con el cliente.';
+COMMENT ON COLUMN sales.orders.picking_completed_when IS 'Momento en que se terminó de preparar (picking) el pedido. NULL = no preparado.';
+COMMENT ON COLUMN sales.order_lines.picked_quantity IS 'Unidades efectivamente preparadas; puede ser menor que quantity si faltó stock.';
+COMMENT ON COLUMN sales.order_lines.unit_price IS 'Precio unitario acordado, sin impuestos.';
+
+COMMENT ON COLUMN sales.invoices.bill_to_customer_id IS 'Cliente que paga la factura (puede diferir del cliente que recibe).';
+COMMENT ON COLUMN sales.invoices.order_id IS 'Pedido que originó la factura.';
+COMMENT ON COLUMN sales.invoices.is_credit_note IS 'TRUE si es nota de crédito (devolución o ajuste) en lugar de una venta.';
+COMMENT ON COLUMN sales.invoices.total_dry_items IS 'Cantidad de bultos secos (sin refrigeración) despachados.';
+COMMENT ON COLUMN sales.invoices.total_chiller_items IS 'Cantidad de bultos refrigerados despachados.';
+COMMENT ON COLUMN sales.invoices.confirmed_delivery_time IS 'Momento confirmado de entrega al cliente. NULL = sin confirmar.';
+
+COMMENT ON COLUMN sales.invoice_lines.quantity IS 'Unidades vendidas en la línea.';
+COMMENT ON COLUMN sales.invoice_lines.unit_price IS 'Precio unitario de venta, sin impuestos.';
+COMMENT ON COLUMN sales.invoice_lines.tax_rate IS 'Tasa de impuesto aplicada, en porcentaje.';
+COMMENT ON COLUMN sales.invoice_lines.tax_amount IS 'Importe del impuesto de la línea.';
+COMMENT ON COLUMN sales.invoice_lines.line_profit IS 'Utilidad (margen) de la línea, sin impuestos.';
+COMMENT ON COLUMN sales.invoice_lines.extended_price IS 'Importe total de la línea CON impuestos = quantity * unit_price + tax_amount.';
+
+-- Columnas de auditoría, comunes a todas las tablas
+DO $$
+DECLARE
+    tabla text;
+BEGIN
+    FOR tabla IN
+        SELECT table_schema || '.' || table_name
+        FROM information_schema.columns
+        WHERE table_schema IN ('application', 'warehouse', 'sales')
+          AND column_name = 'last_edited_when'
+    LOOP
+        EXECUTE format(
+            'COMMENT ON COLUMN %s.last_edited_by IS %L', tabla,
+            'Persona que hizo la última modificación (auditoría).'
+        );
+        EXECUTE format(
+            'COMMENT ON COLUMN %s.last_edited_when IS %L', tabla,
+            'Fecha/hora (UTC) de la última modificación. Se usa como marca de agua (watermark) en la carga incremental.'
+        );
+    END LOOP;
+END;
+$$;
+
 -- ============================= índices ==============================
 -- PostgreSQL no indexa automáticamente las claves foráneas.
 -- last_edited_when se indexa para la extracción incremental (watermark).

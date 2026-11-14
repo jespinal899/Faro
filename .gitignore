@@ -1,0 +1,43 @@
+# ===== Secretos (NUNCA subir) =====
+.env
+.env.*
+!.env.example
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# ===== Node / Frontend =====
+node_modules/
+dist/
+build/
+
+# ===== Datos y artefactos pesados =====
+# Respaldos y volcados de bases de datos (se obtienen con los scripts, no se versionan)
+*.bak
+*.bacpac
+*.dump
+data/raw/
+# Artefactos de MLflow / modelos entrenados (se regeneran con el pipeline)
+mlruns/
+mlartifacts/
+machine-learning/models/*
+!machine-learning/models/.gitkeep
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Sistema operativo / IDE =====
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json

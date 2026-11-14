@@ -29,7 +29,7 @@ Las decisiones técnicas y su justificación están en
 | Fase | Contenido | Estado |
 |---|---|---|
 | 0. Entorno | Python, Docker, PostgreSQL local, repositorio, CI | ✅ Completa |
-| 1. Descubrimiento | Cargar la fuente, ERD, diccionario, perfilado, preguntas analíticas | 🔄 En curso (fuente cargada) |
+| 1. Descubrimiento | Cargar la fuente, ERD, diccionario, perfilado, preguntas analíticas | 🔄 En curso (falta desplegar en Neon) |
 | 2. Diseño | Arquitectura, staging, grano, dimensiones | — |
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena | — |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | — |
@@ -98,6 +98,21 @@ Evidencia en [documentation/pruebas/reconciliacion-carga-fuente.md](documentatio
 | Puerto | Servicio |
 |---|---|
 | `14330` | SQL Server temporal (solo Fase 1) |
+
+### Documentación de la fuente (se genera desde la base, no se edita a mano)
+
+```powershell
+uv run python database/scripts/documentar_fuente.py   # diccionario de datos + diagrama ER
+uv run python database/scripts/perfilar_fuente.py     # perfil y 32 reglas de calidad
+```
+
+| Documento | Contenido |
+|---|---|
+| [Alcance y preguntas analíticas](documentation/arquitectura/alcance-y-preguntas.md) | Proceso de negocio, preguntas, KPI y hallazgos |
+| [Diccionario de datos](documentation/modelos/diccionario-fuente.md) | 17 tablas, columnas, claves y linaje desde SQL Server |
+| [Diagrama entidad-relación](documentation/modelos/erd-fuente.md) | Diagrama Mermaid (visible en GitHub) |
+| [Perfil de datos](documentation/pruebas/perfil-fuente.md) | Reglas de calidad, distribuciones y perfil por columna |
+| [Reconciliación de la carga](documentation/pruebas/reconciliacion-carga-fuente.md) | Conteos y sumas de control origen vs destino |
 
 ## Calidad y pruebas (lo mismo que ejecuta el CI)
 

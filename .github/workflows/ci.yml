@@ -71,4 +71,7 @@ jobs:
       - name: Validar sintaxis y variables
         env:
           POSTGRES_PASSWORD: solo_para_validar
-        run: docker compose config --quiet
+          MSSQL_SA_PASSWORD: Solo_Para_Validar_1
+        run: |
+          docker compose config --quiet
+          docker compose -f database/source/seed/docker-compose.seed.yml config --quiet

@@ -95,6 +95,26 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
 - **Seguridad:** el repositorio es público, así que `.env` está excluido por `.gitignore`.
   El pipeline corre con permisos mínimos (`contents: read`) y las acciones usan versiones fijas.
 
+## D-09 · Alcance: proceso de ventas
+
+- **Estado:** Aceptada (2026-11-14)
+- **Decisión:** Faro cubre el proceso de **ventas** (pedido → factura → entrega). Quedan fuera
+  compras, movimientos de inventario y pagos de clientes.
+- **Justificación:** la guía recomienda un proceso principal resuelto de punta a punta.
+  Ventas tiene el mayor volumen (228k líneas de factura) y responde las preguntas de
+  negocio más relevantes. Detalle en
+  [alcance-y-preguntas.md](../arquitectura/alcance-y-preguntas.md).
+
+## D-10 · Documentación generada desde la base (*docs as code*)
+
+- **Estado:** Aceptada (2026-11-14)
+- **Decisión:** el diccionario de datos, el diagrama entidad-relación y el perfil de calidad
+  se **generan con scripts** a partir del catálogo de PostgreSQL. No se editan a mano.
+- **Alternativa considerada:** escribirlos a mano (en Word o en una herramienta de diagramas).
+- **Justificación:** la documentación nunca queda desactualizada respecto de la base real, se
+  versiona en Git y cualquiera puede regenerarla con un comando. El diagrama en Mermaid es
+  editable y GitHub lo muestra directamente.
+
 ---
 
 ## Pendientes

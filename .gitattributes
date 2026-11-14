@@ -1,0 +1,17 @@
+# Guardar todos los archivos de texto con fin de línea LF (estilo Linux).
+# Los contenedores de Docker y GitHub Actions corren en Linux: un script con
+# CRLF (estilo Windows) puede fallar allí.
+* text=auto eol=lf
+
+# Scripts propios de Windows sí usan CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Archivos binarios: nunca convertir
+*.png binary
+*.jpg binary
+*.pdf binary
+*.bak binary
+*.pkl binary
+*.joblib binary

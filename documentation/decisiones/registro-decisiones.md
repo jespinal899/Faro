@@ -77,6 +77,24 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
   operacional) y `faro_` lo que pertenece a la plataforma analítica. Así queda claro qué
   es dato de origen y qué es producto del proceso.
 
+## D-08 · Flujo de Git y CI/CD con GitHub Actions
+
+- **Estado:** Aceptada (2026-11-14)
+- **Decisión:**
+  - Repositorio público en GitHub (`jespinal899/Faro`). `main` siempre estable; cada cambio
+    entra por rama y Pull Request. Commits en formato *Conventional Commits*.
+  - **CI** en GitHub Actions con tres jobs: calidad (`ruff`), pruebas (`pytest` con un
+    PostgreSQL 17 temporal como servicio) y validación de `docker-compose`.
+  - **CD** incremental: migraciones de base de datos hacia Neon (Fase 1) y despliegue de la
+    aplicación (Fase 5). Las credenciales de producción irán en *GitHub Secrets*,
+    nunca en el repositorio.
+- **Alternativas consideradas:** GitLab CI o Jenkins. Se elige GitHub Actions porque el código
+  ya está en GitHub y es gratuito en repositorios públicos.
+- **Justificación:** cada cambio se verifica automáticamente antes de integrarse, y el historial
+  de ejecuciones sirve como evidencia de pruebas (la guía lo pide en la sección 12).
+- **Seguridad:** el repositorio es público, así que `.env` está excluido por `.gitignore`.
+  El pipeline corre con permisos mínimos (`contents: read`) y las acciones usan versiones fijas.
+
 ---
 
 ## Pendientes

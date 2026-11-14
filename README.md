@@ -29,7 +29,7 @@ Las decisiones técnicas y su justificación están en
 | Fase | Contenido | Estado |
 |---|---|---|
 | 0. Entorno | Python, Docker, PostgreSQL local, repositorio, CI | ✅ Completa |
-| 1. Descubrimiento | Cargar la fuente, ERD, diccionario, perfilado, preguntas analíticas | ⏳ Siguiente |
+| 1. Descubrimiento | Cargar la fuente, ERD, diccionario, perfilado, preguntas analíticas | 🔄 En curso (fuente cargada) |
 | 2. Diseño | Arquitectura, staging, grano, dimensiones | — |
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena | — |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | — |
@@ -70,6 +70,34 @@ Resultado esperado:
 [OK]    Fuente (OLTP): base=wwi_oltp usuario=admin PostgreSQL 17.x
 [OK]    Analítica (staging + DW): base=faro_analytics usuario=admin PostgreSQL 17.x
 ```
+
+## Cargar la base operacional (una vez por entorno)
+
+La fuente es el módulo de ventas de **WideWorldImporters**, que Microsoft solo publica
+como respaldo de SQL Server. Por eso se usa un SQL Server **temporal** (solo para leer el
+respaldo), y luego se migra a PostgreSQL (`wwi_oltp`).
+
+```powershell
+# 1. SQL Server temporal: descarga el respaldo oficial (121 MB) y arranca el motor
+docker compose --env-file .env -f database/source/seed/docker-compose.seed.yml up -d
+
+# 2. Restaurar WideWorldImporters (queda en solo lectura)
+$env:SQLCMDPASSWORD = "<valor de MSSQL_SA_PASSWORD en .env>"
+sqlcmd -S localhost,14330 -U sa -C -b -i database/source/seed/01_restaurar_wwi.sql
+
+# 3. Migrar a PostgreSQL: esquema + datos + reconciliación (~45 s, se puede repetir)
+uv run --group seed python database/source/seed/migrar_wwi.py
+
+# 4. (Al terminar la Fase 1) eliminar el SQL Server temporal
+docker compose --env-file .env -f database/source/seed/docker-compose.seed.yml down -v
+```
+
+Resultado: 17 tablas y 644 488 filas, con conteos y sumas de control verificados.
+Evidencia en [documentation/pruebas/reconciliacion-carga-fuente.md](documentation/pruebas/reconciliacion-carga-fuente.md).
+
+| Puerto | Servicio |
+|---|---|
+| `14330` | SQL Server temporal (solo Fase 1) |
 
 ## Calidad y pruebas (lo mismo que ejecuta el CI)
 

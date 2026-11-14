@@ -161,7 +161,7 @@ def escribir_reporte(entorno: str, duracion: float, conteos: list, controles: li
         "",
     ]
     REPORTE.parent.mkdir(parents=True, exist_ok=True)
-    REPORTE.write_text("\n".join(lineas), encoding="utf-8")
+    REPORTE.write_text("\n".join(lineas), encoding="utf-8", newline="\n")
 
 
 def main() -> int:

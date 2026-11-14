@@ -1,7 +1,7 @@
 # Diccionario de datos — base operacional `wwi_oltp`
 
 > Generado automáticamente por `database/scripts/documentar_fuente.py` desde la base
-> real (2026-11-14 23:39 UTC). No editar a mano: regenerar.
+> real (2026-11-14 23:40 UTC). No editar a mano: regenerar.
 
 **Fuente original:** WideWorldImporters (SQL Server), módulo de ventas.
 **Tablas:** 17 · **Filas:** 644,488

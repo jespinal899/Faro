@@ -2,9 +2,9 @@
 
 Generado automáticamente por `database/source/seed/migrar_wwi.py`.
 
-- **Fecha (UTC):** 2026-11-14 23:33:37
+- **Fecha (UTC):** 2026-11-14 23:38:38
 - **Entorno destino:** local (localhost)
-- **Duración:** 42.5 s
+- **Duración:** 20.7 s
 - **Resultado:** ✅ RECONCILIADO
 
 ## Conteo de filas por tabla

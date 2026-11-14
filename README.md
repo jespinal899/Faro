@@ -1,5 +1,7 @@
 # Faro — Plataforma de Analítica Inteligente de Ventas
 
+[![CI](https://github.com/jespinal899/Faro/actions/workflows/ci.yml/badge.svg)](https://github.com/jespinal899/Faro/actions/workflows/ci.yml)
+
 > Así como un faro ilumina el camino, Faro convierte los datos operacionales
 > en información confiable para tomar decisiones.
 
@@ -26,7 +28,7 @@ Las decisiones técnicas y su justificación están en
 
 | Fase | Contenido | Estado |
 |---|---|---|
-| 0. Entorno | Python, Docker, PostgreSQL local, repositorio | ✅ Completa |
+| 0. Entorno | Python, Docker, PostgreSQL local, repositorio, CI | ✅ Completa |
 | 1. Descubrimiento | Cargar la fuente, ERD, diccionario, perfilado, preguntas analíticas | ⏳ Siguiente |
 | 2. Diseño | Arquitectura, staging, grano, dimensiones | — |
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena | — |
@@ -69,6 +71,31 @@ Resultado esperado:
 [OK]    Analítica (staging + DW): base=faro_analytics usuario=admin PostgreSQL 17.x
 ```
 
+## Calidad y pruebas (lo mismo que ejecuta el CI)
+
+```powershell
+uv run ruff check .            # errores y malas prácticas
+uv run ruff format .           # aplica el formato estándar
+uv run pytest -v               # pruebas (las de integración requieren la base levantada)
+```
+
+## Flujo de trabajo con Git y CI/CD
+
+1. `main` siempre debe funcionar. Cada cambio se hace en una rama
+   (`fase-1/carga-fuente`, `ci/...`, `docs/...`).
+2. Commits en formato *Conventional Commits*: `feat:`, `fix:`, `docs:`, `test:`, `ci:`, `chore:`.
+3. Se abre un **Pull Request** hacia `main`. GitHub Actions ejecuta automáticamente:
+
+   | Job | Qué valida |
+   |---|---|
+   | Calidad de código | `ruff` sin errores y con formato correcto |
+   | Pruebas | `pytest` contra un PostgreSQL 17 temporal (misma versión que Neon) |
+   | Validar docker-compose | que el archivo de Docker sea válido |
+
+4. Solo se integra a `main` si todos los jobs pasan.
+5. **CD (despliegue continuo):** se agrega por etapas, cuando exista algo que desplegar.
+   Primero los esquemas de base de datos hacia Neon (Fase 1) y después la aplicación (Fase 5).
+
 ## Reiniciar el entorno desde cero
 
 ```powershell
@@ -93,7 +120,8 @@ docker compose up -d       # vuelve a crear las bases vacías
 ├── machine-learning/   notebooks, entrenamiento, evaluación, modelos
 ├── generative-ai/      asistente analítico
 ├── notifications/      alertas
-├── tests/              pruebas automatizadas
+├── tests/              pruebas automatizadas (pytest)
+├── .github/workflows/  pipelines de CI/CD (GitHub Actions)
 ├── deployment/         configuración de producción
 ├── docker-compose.yml  entorno de desarrollo
 ├── pyproject.toml      dependencias de Python (uv)

@@ -1,0 +1,56 @@
+# Faro — Herramienta TEMPORAL de la Fase 1 (no forma parte de la arquitectura final).
+#
+# WideWorldImporters solo se distribuye como respaldo de SQL Server (.bak).
+# Este entorno levanta un SQL Server desechable únicamente para LEER ese respaldo
+# y migrar el módulo de ventas a PostgreSQL (wwi_oltp). Al terminar la migración
+# se elimina por completo. Es un proyecto Docker separado ("faro-seed"), así que
+# borrarlo no afecta al PostgreSQL principal.
+#
+# Uso (desde la raíz del repositorio):
+#   docker compose --env-file .env -f database/source/seed/docker-compose.seed.yml up -d
+#   docker compose --env-file .env -f database/source/seed/docker-compose.seed.yml down -v
+
+name: faro-seed
+
+services:
+  # 1) Descarga el respaldo oficial de Microsoft a un volumen dedicado (una sola vez)
+  descarga-wwi:
+    image: curlimages/curl:8.11.1
+    user: root
+    volumes:
+      - wwi_backup:/backup
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        ARCHIVO=/backup/WideWorldImporters-Standard.bak
+        TAMANO_ESPERADO=126951424
+        URL=https://github.com/microsoft/sql-server-samples/releases/download/wide-world-importers-v1.0/WideWorldImporters-Standard.bak
+        if [ -f "$$ARCHIVO" ] && [ "$$(stat -c %s "$$ARCHIVO")" = "$$TAMANO_ESPERADO" ]; then
+          echo "Respaldo ya descargado"
+        else
+          curl -fL --retry 3 -o "$$ARCHIVO.tmp" "$$URL"
+          [ "$$(stat -c %s "$$ARCHIVO.tmp")" = "$$TAMANO_ESPERADO" ] || { echo "ERROR: tamaño inesperado"; exit 1; }
+          mv "$$ARCHIVO.tmp" "$$ARCHIVO"
+        fi
+        chmod 644 "$$ARCHIVO"
+        sha256sum "$$ARCHIVO"
+
+  # 2) SQL Server desechable donde se restaura el respaldo (solo lectura de datos)
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: faro-seed-sqlserver
+    depends_on:
+      descarga-wwi:
+        condition: service_completed_successfully
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer # uso temporal de desarrollo, permitido por la licencia
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Define MSSQL_SA_PASSWORD en el archivo .env}
+    ports:
+      - "14330:1433"
+    volumes:
+      - wwi_backup:/var/opt/mssql/backup:ro
+
+volumes:
+  wwi_backup:

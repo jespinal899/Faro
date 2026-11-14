@@ -2,6 +2,7 @@
 
 Produce:
   - documentation/modelos/diccionario-fuente.md : diccionario de datos con linaje.
+  - documentation/modelos/erd-fuente.md         : diagrama entidad-relación (Mermaid).
 
 Lee del catálogo de PostgreSQL (tipos, nulos, claves, descripciones, conteos) y agrega
 el linaje (columna original en SQL Server) desde el mapeo de la migración.
@@ -27,7 +28,20 @@ sys.path.insert(0, str(RAIZ / "database" / "source" / "seed"))
 from mapeo_wwi import TABLAS  # noqa: E402
 
 DICCIONARIO = RAIZ / "documentation" / "modelos" / "diccionario-fuente.md"
+ERD = RAIZ / "documentation" / "modelos" / "erd-fuente.md"
 ESQUEMAS = ("application", "warehouse", "sales")
+AUDITORIA = ("last_edited_by", "last_edited_when")
+
+# Tipos de PostgreSQL -> nombre corto para el diagrama
+TIPOS_CORTOS = {
+    "integer": "int",
+    "bigint": "bigint",
+    "boolean": "bool",
+    "date": "date",
+    "text": "text",
+    "double precision": "float8",
+    "timestamp with time zone": "timestamptz",
+}
 
 SQL_COLUMNAS = """
 SELECT n.nspname || '.' || c.relname          AS tabla,
@@ -70,6 +84,7 @@ def leer_catalogo(conn: psycopg.Connection) -> dict:
         columnas[tabla].append({"columna": columna, "tipo": tipo, "nulo": nulo, "desc": desc})
 
     claves: dict[tuple[str, str], list[str]] = defaultdict(list)
+    fks: list[tuple[str, str, str]] = []  # (tabla, columna, tabla_referenciada)
     for tabla, tipo, columna, ref_tabla, ref_columna in conn.execute(SQL_CLAVES, (esquemas,)):
         if tipo == "p":
             claves[(tabla, columna)].append("PK")
@@ -77,12 +92,19 @@ def leer_catalogo(conn: psycopg.Connection) -> dict:
             claves[(tabla, columna)].append("UQ")
         else:
             claves[(tabla, columna)].append(f"FK → `{ref_tabla}.{ref_columna}`")
+            fks.append((tabla, columna, ref_tabla))
 
     descripciones = dict(conn.execute(SQL_TABLAS, (esquemas,)).fetchall())
     filas = {
         t.destino: conn.execute(f"SELECT count(*) FROM {t.destino}").fetchone()[0] for t in TABLAS
     }
-    return {"columnas": columnas, "claves": claves, "desc": descripciones, "filas": filas}
+    return {
+        "columnas": columnas,
+        "claves": claves,
+        "fks": sorted(fks),
+        "desc": descripciones,
+        "filas": filas,
+    }
 
 
 def _linaje() -> dict[tuple[str, str], str]:
@@ -146,6 +168,73 @@ def generar_diccionario(cat: dict) -> str:
     return "\n".join(out) + "\n"
 
 
+def _entidad(tabla: str) -> str:
+    """Mermaid no admite puntos en los nombres: sales.orders -> sales_orders."""
+    return tabla.replace(".", "_")
+
+
+def generar_erd(cat: dict) -> str:
+    out = [
+        "# Diagrama entidad-relación — base operacional `wwi_oltp`",
+        "",
+        "> Generado automáticamente por `database/scripts/documentar_fuente.py` desde la base",
+        f"> real ({datetime.now(UTC):%Y-%m-%d %H:%M} UTC). No editar a mano: regenerar.",
+        "",
+        "**Cómo leerlo:** `||--o{` = uno a muchos (la FK es obligatoria);",
+        "`|o--o{` = cero o uno a muchos (la FK admite NULL). La etiqueta es la columna FK.",
+        "",
+        "**Simplificación:** se omiten `last_edited_by` y `last_edited_when`, presentes en todas",
+        "las tablas (cada `last_edited_by` es una FK a `application.people`).",
+        "",
+        "```mermaid",
+        "erDiagram",
+    ]
+    nulos = {(t, c["columna"]): c["nulo"] for t, cols in cat["columnas"].items() for c in cols}
+    for tabla, columna, ref_tabla in cat["fks"]:
+        if columna in AUDITORIA:
+            continue
+        relacion = "|o--o{" if nulos[(tabla, columna)] else "||--o{"
+        out.append(f'    {_entidad(ref_tabla)} {relacion} {_entidad(tabla)} : "{columna}"')
+    for t in TABLAS:
+        out.append(f"    {_entidad(t.destino)} {{")
+        for col in cat["columnas"][t.destino]:
+            if col["columna"] in AUDITORIA:
+                continue
+            marcas = [
+                "FK" if k.startswith("FK") else ("UK" if k == "UQ" else k)
+                for k in cat["claves"].get((t.destino, col["columna"]), [])
+            ]
+            tipo = TIPOS_CORTOS.get(col["tipo"], col["tipo"].split("(")[0].replace(" ", "_"))
+            tipo = {"character_varying": "varchar"}.get(tipo, tipo)
+            out.append(f"        {tipo} {col['columna']} {', '.join(marcas)}".rstrip())
+        out.append("    }")
+    out += [
+        "```",
+        "",
+        "## Observaciones para el modelo dimensional",
+        "",
+        "- **Producto ↔ grupo es MUCHOS a MUCHOS** (`warehouse.stock_item_stock_groups`): un",
+        "  producto puede pertenecer a varios grupos. Unir ventas con grupos sin control",
+        "  **multiplicaría los importes**; hay que resolverlo en el diseño (Fase 2).",
+        "- **Cliente que recibe ≠ cliente que paga:** `customers.bill_to_customer_id` y",
+        "  `invoices.bill_to_customer_id` son autorreferencias a `sales.customers`.",
+        "- **Pedidos pendientes:** `orders.backorder_order_id` es una autorreferencia a",
+        "  `sales.orders`.",
+        "- **Una persona, varios roles:** vendedor, contacto, preparador y empacador apuntan todos",
+        "  a `application.people` (en el DW serán *role-playing dimensions*).",
+        "- **Dos ciudades por cliente:** de entrega (`delivery_city_id`) y postal",
+        "  (`postal_city_id`).",
+        "",
+    ]
+    return "\n".join(out)
+
+
+def _escribir(ruta: Path, contenido: str) -> None:
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    ruta.write_text(contenido, encoding="utf-8", newline="\n")  # LF, igual que el repositorio
+    print(f"Generado: {ruta.relative_to(RAIZ)}")
+
+
 def main() -> int:
     load_dotenv(RAIZ / ".env")
     url = os.getenv("SOURCE_DATABASE_URL")
@@ -154,9 +243,8 @@ def main() -> int:
         return 1
     with psycopg.connect(url, connect_timeout=10) as conn:
         cat = leer_catalogo(conn)
-    DICCIONARIO.parent.mkdir(parents=True, exist_ok=True)
-    DICCIONARIO.write_text(generar_diccionario(cat), encoding="utf-8")
-    print(f"Diccionario generado: {DICCIONARIO.relative_to(RAIZ)}")
+    _escribir(DICCIONARIO, generar_diccionario(cat))
+    _escribir(ERD, generar_erd(cat))
     return 0
 
 

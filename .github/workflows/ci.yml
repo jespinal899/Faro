@@ -1,0 +1,74 @@
+# Integración continua (CI) de Faro.
+# Se ejecuta en cada push a main y en cada Pull Request.
+# Si algún job falla, el cambio NO debe integrarse a main.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Si llegan dos ejecuciones para la misma rama, se cancela la anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Mínimo privilegio: el pipeline solo puede leer el repositorio
+permissions:
+  contents: read
+
+jobs:
+  calidad:
+    name: Calidad de código (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Instalar dependencias exactas (uv.lock)
+        run: uv sync --locked
+      - name: Lint (errores y malas prácticas)
+        run: uv run ruff check .
+      - name: Formato
+        run: uv run ruff format --check .
+
+  pruebas:
+    name: Pruebas (pytest + PostgreSQL 17)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17 # misma versión mayor que Neon (producción)
+        env:
+          POSTGRES_USER: admin
+          # Contraseña desechable: esta base solo existe mientras corre el job
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: wwi_oltp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U admin -d wwi_oltp"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      SOURCE_DATABASE_URL: postgresql://admin:ci_password@localhost:5432/wwi_oltp
+      ANALYTICS_DATABASE_URL: postgresql://admin:ci_password@localhost:5432/faro_analytics
+    steps:
+      - uses: actions/checkout@v7
+      - name: Crear bases (mismo script que usa Docker en local)
+        run: psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -f database/scripts/local-init/01_create_databases.sql
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Instalar dependencias exactas (uv.lock)
+        run: uv sync --locked
+      - name: Ejecutar pruebas
+        run: uv run pytest -v
+
+  docker-compose:
+    name: Validar docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validar sintaxis y variables
+        env:
+          POSTGRES_PASSWORD: solo_para_validar
+        run: docker compose config --quiet

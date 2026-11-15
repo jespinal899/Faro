@@ -36,7 +36,7 @@ Las decisiones técnicas y su justificación están en
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena, zona ready, roles, simulador y ejecución horaria | ✅ Completa |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ✅ Completa |
 | 5. BI | API, dashboard y publicación en Vercel | ✅ Completa |
-| 6. ML y GenAI | Modelo predictivo y asistente | 🔄 En curso (pronóstico entrenado y programado; faltan su vista en el dashboard y el asistente) |
+| 6. ML y GenAI | Modelo predictivo y asistente | 🔄 En curso (pronóstico listo: modelo, proceso programado, API y pestaña del dashboard; falta el asistente) |
 | 7. Automatización | Alertas y monitoreo | — |
 | 8. Integración | Pruebas end-to-end, despliegue, video | — |
 
@@ -234,12 +234,14 @@ Se ingresa con el usuario `demo` y la contraseña `FARO_PASSWORD_DEMO` del `.env
 | Facturas paginadas con búsqueda | Clic en una factura = detalle por línea |
 | Frescura de los datos y aviso de datos simulados | En el encabezado |
 | Vista de tabla en cada gráfico, modo oscuro y diseño para móvil | Accesibilidad |
+| Pestaña **Pronóstico**: las 4 semanas siguientes por grupo, con rango del 80 %, calidad del modelo contra la línea base y evaluación en semanas que no vio | Identificada como **predicción**, no dato histórico |
 
 Capturas (las genera la prueba E2E): [inicio de sesión](documentation/capturas/01-inicio-sesion.png) ·
 [dashboard](documentation/capturas/02-dashboard.png) ·
 [filtros y drill-down](documentation/capturas/03-filtros-y-drill-down.png) ·
 [detalle de factura](documentation/capturas/04-detalle-factura.png) ·
-[modo oscuro](documentation/capturas/05-modo-oscuro.png) · [móvil](documentation/capturas/06-movil.png).
+[modo oscuro](documentation/capturas/05-modo-oscuro.png) · [móvil](documentation/capturas/06-movil.png) ·
+[pronóstico](documentation/capturas/07-pronostico.png).
 
 ## Producción (Vercel)
 

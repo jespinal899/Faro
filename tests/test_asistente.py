@@ -260,3 +260,151 @@ def test_las_definiciones_coinciden_con_la_validacion():
         modelo, _ = herramientas._EJECUTORES[d["name"]]
         assert set(d["input_schema"]["properties"]) == set(modelo.model_fields), d["name"]
         assert d["input_schema"]["additionalProperties"] is False
+
+
+# ---------------------------------------------------------------- dialecto compatible con OpenAI
+# (Groq, Ollama): las herramientas y el JSON van en llamadas distintas.
+
+from types import SimpleNamespace as N  # noqa: E402
+
+
+def _oa(contenido="", llamadas=(), fin="stop", entrada=300, salida=40):
+    tool_calls = [
+        N(id=f"c{i}", function=N(name=nombre, arguments=args))
+        for i, (nombre, args) in enumerate(llamadas)
+    ] or None
+    return N(
+        choices=[N(message=N(content=contenido, tool_calls=tool_calls), finish_reason=fin)],
+        usage=N(prompt_tokens=entrada, completion_tokens=salida),
+        id="chatcmpl-prueba",
+    )
+
+
+class ClienteOpenAISimulado:
+    def __init__(self, *respuestas):
+        self.respuestas = list(respuestas)
+        self.solicitudes: list[dict] = []
+        self.chat = N(completions=self)
+
+    def create(self, **kwargs):
+        self.solicitudes.append(copy.deepcopy(kwargs))
+        return self.respuestas.pop(0)
+
+
+def responder_oa(cliente, pregunta="¿Cuánto vendimos en 2015?"):
+    asistente = motor.Asistente(cliente, modelo="openai/gpt-oss-120b", proveedor="openai")
+    return asistente.responder(pregunta, [], CTX, USUARIO)
+
+
+FINAL_OA = json.dumps(
+    {
+        "tipo": "respuesta",
+        "resumen": "En 2015 las ventas netas fueron USD 53,991,490.",
+        "hechos": [{"texto": "Ventas netas 2015: USD 53,991,490", "consultas": [1]}],
+        "predicciones": [],
+        "interpretaciones": [],
+        "sugerencias": [],
+    }
+)
+
+
+def test_openai_herramientas_y_json_nunca_van_juntos_y_el_costo_es_cero(resultados_falsos):
+    cliente = ClienteOpenAISimulado(
+        _oa(
+            llamadas=[("consultar_indicadores", '{"desde":"2015-01-01","hasta":"2015-12-31"}')],
+            fin="tool_calls",
+        ),
+        _oa(contenido=f"```json\n{FINAL_OA}\n```"),  # el JSON llega dentro de un bloque de código
+    )
+    r = responder_oa(cliente)
+
+    assert r.tipo == "respuesta" and r.hechos[0].respaldada and r.costo_usd == 0
+    for s in cliente.solicitudes:
+        assert not ("tools" in s and "response_format" in s)  # Groq los rechaza juntos (400)
+        assert s["reasoning_effort"] == "low"
+    # La respuesta final se pide con la herramienta "responder"; el resultado vuelve como "tool"
+    assert motor.RESPONDER in cliente.solicitudes[0]["messages"][0]["content"]
+    assert motor.RESPONDER in [t["function"]["name"] for t in cliente.solicitudes[0]["tools"]]
+    herramienta_msg = cliente.solicitudes[1]["messages"][-1]
+    assert (
+        herramienta_msg["role"] == "tool"
+        and json.loads(herramienta_msg["content"])["consulta"] == 1
+    )
+
+
+def test_openai_si_el_texto_no_es_json_pide_el_formato_sin_herramientas(resultados_falsos):
+    cliente = ClienteOpenAISimulado(
+        _oa(contenido="Las ventas fueron altas."),  # texto libre en vez de JSON
+        _oa(contenido=json.dumps({**json.loads(FINAL_OA), "tipo": "sin_datos", "hechos": []})),
+    )
+    r = responder_oa(cliente)
+    final = cliente.solicitudes[1]
+    assert "tools" not in final and final["response_format"]["type"] == "json_schema"
+    assert final["messages"][-1]["content"] == motor.PEDIDO_FORMATO
+    assert r.tipo == "sin_datos"
+
+
+def test_openai_argumentos_invalidos_vuelven_como_error(resultados_falsos):
+    cliente = ClienteOpenAISimulado(
+        _oa(llamadas=[("consultar_indicadores", "{no es json")], fin="tool_calls"),
+        _oa(contenido=json.dumps({**json.loads(FINAL_OA), "tipo": "sin_datos", "hechos": []})),
+    )
+    r = responder_oa(cliente)
+    assert r.consultas[0].error and "JSON" in r.consultas[0].error
+    assert cliente.solicitudes[1]["messages"][-1]["content"].startswith("ERROR:")
+
+
+def test_leer_json_tolera_texto_alrededor_y_rechaza_lo_que_no_es_respuesta():
+    assert (
+        motor.leer_json('Aquí va: {"tipo": "respuesta", "resumen": "x"} listo')["tipo"]
+        == "respuesta"
+    )
+    assert motor.leer_json("sin json") is None
+    assert motor.leer_json('{"otra": "cosa"}') is None
+
+
+def test_openai_la_respuesta_final_llega_por_la_herramienta_responder(resultados_falsos):
+    cliente = ClienteOpenAISimulado(
+        _oa(
+            llamadas=[("consultar_indicadores", '{"desde":"2015-01-01","hasta":"2015-12-31"}')],
+            fin="tool_calls",
+        ),
+        _oa(llamadas=[(motor.RESPONDER, FINAL_OA)], fin="tool_calls"),
+    )
+    r = responder_oa(cliente)
+    assert r.tipo == "respuesta" and r.hechos[0].respaldada
+    assert len(cliente.solicitudes) == 2  # sin llamada extra de formato
+    assert [c.herramienta for c in r.consultas] == [
+        "consultar_indicadores"
+    ]  # responder no es consulta
+
+
+def test_openai_recupera_la_respuesta_si_el_modelo_llama_a_una_herramienta_inexistente(
+    resultados_falsos,
+):
+    import httpx2
+    import openai
+
+    generado = json.dumps({"name": "json", "arguments": json.loads(FINAL_OA)})
+
+    class ClienteConFallo(ClienteOpenAISimulado):
+        def create(self, **kwargs):
+            if len(self.solicitudes) == 1:  # la segunda llamada falla como en Groq
+                self.solicitudes.append(kwargs)
+                raise openai.BadRequestError(
+                    "tool_use_failed",
+                    response=httpx2.Response(
+                        400, request=httpx2.Request("POST", "https://api.groq.com")
+                    ),
+                    body={"error": {"code": "tool_use_failed", "failed_generation": generado}},
+                )
+            return super().create(**kwargs)
+
+    cliente = ClienteConFallo(
+        _oa(
+            llamadas=[("consultar_indicadores", '{"desde":"2015-01-01","hasta":"2015-12-31"}')],
+            fin="tool_calls",
+        )
+    )
+    r = responder_oa(cliente)
+    assert r.tipo == "respuesta" and r.hechos[0].respaldada

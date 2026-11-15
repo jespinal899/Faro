@@ -1,0 +1,68 @@
+# Simulador de ventas en producción (Neon).
+#
+# Hace de "sistema de ventas en operación": inserta en wwi_oltp los pedidos y facturas del
+# siguiente día hábil del reloj de negocio simulado (a partir del 1-jun-2016).
+# TODO lo que crea queda marcado como simulado (persona "Simulador de ventas").
+#
+# Corre una vez al día y también a mano (Actions -> Simulador - Ventas -> Run workflow),
+# con opciones para la demo: varios días, menos volumen o un registro inválido.
+# Usa el rol wwi_app, que solo puede insertar pedidos y facturas.
+
+name: Simulador - Ventas
+
+on:
+  schedule:
+    - cron: "40 11 * * *" # una vez al día (UTC); el ETL de la hora siguiente lo carga
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: "Días hábiles a simular (1 a 60)"
+        type: number
+        default: 1
+      factor_volumen:
+        description: "Volumen de ventas (1 = normal · 0.5 = la mitad, para probar alertas)"
+        type: string
+        default: "1"
+      registro_invalido:
+        description: "Agregar una línea inválida (demuestra la cuarentena del ETL)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: simulador-ventas-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  simular:
+    name: Simular ventas
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      SIMULADOR_DATABASE_URL: ${{ secrets.NEON_APP_SOURCE_URL }}
+      DIAS: ${{ inputs.dias || 1 }}
+      FACTOR: ${{ inputs.factor_volumen || '1' }}
+      INVALIDO: ${{ inputs.registro_invalido && '--registro-invalido' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Instalar dependencias exactas (uv.lock)
+        run: uv sync --locked
+
+      - name: Simular ventas (SIMULACIÓN)
+        run: |
+          uv run python -m simulador.ventas --dias "$DIAS" --factor-volumen "$FACTOR" $INVALIDO 2>&1 | tee simulacion.log
+
+      - name: Resumen
+        if: always()
+        run: |
+          {
+            echo "## Simulador - Ventas (datos SIMULADOS)"
+            echo ""
+            echo '```'
+            grep -E "INFO|ERROR" simulacion.log | sed -E 's/^[^ ]+ [^ ]+ //' || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

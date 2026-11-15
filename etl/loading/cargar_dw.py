@@ -6,6 +6,9 @@ Orden (las claves de dimensión se resuelven ANTES de insertar los hechos):
        - Clave nueva           -> versión 1, vigente desde 1900-01-01.
        - Cambio en atributo T1 -> se sobrescribe en todas sus versiones.
        - Cambio en atributo T2 -> se cierra la versión vigente y se abre una nueva.
+         Los atributos T2 son IDENTIFICADORES (categoría, grupo, cliente de facturación):
+         los nombres se refrescan en todas las versiones según su ID, así renombrar una
+         categoría no crea versiones falsas.
      La nueva versión rige desde el día siguiente a la última venta cargada (el "reloj de
      negocio"): así las ventas anteriores conservan el contexto que tenían.
   3. Puente producto-grupo (factor de ponderación 1/n).
@@ -40,7 +43,11 @@ class DimensionSCD2:
     clave_natural: str
     clave_sustituta: str
     tipo1: tuple[str, ...]  # se sobrescriben
-    tipo2: tuple[str, ...]  # generan una versión nueva
+    tipo2: tuple[str, ...]  # generan una versión nueva (identificadores, no nombres)
+    # (columna con el nombre, columna con su ID, consulta "SELECT id, nombre"): el nombre se
+    # refresca en TODAS las versiones según el ID que tiene cada una. Así renombrar una
+    # categoría o un grupo no crea versiones nuevas (no es un cambio del cliente/producto).
+    nombres: tuple[tuple[str, str, str], ...] = ()
 
 
 DIMENSIONES_SCD1 = (
@@ -77,7 +84,20 @@ DIMENSIONES_SCD2 = (
             "descuento_estandar",
             "fecha_apertura",
         ),
-        tipo2=("categoria", "grupo_compra", "cliente_facturacion"),
+        tipo2=("categoria_id", "grupo_compra_id", "cliente_facturacion_id"),
+        nombres=(
+            (
+                "categoria",
+                "categoria_id",
+                "SELECT customer_category_id, customer_category_name "
+                "FROM stg_clean.sales_customer_categories",
+            ),
+            (
+                "grupo_compra",
+                "grupo_compra_id",
+                "SELECT buying_group_id, buying_group_name FROM stg_clean.sales_buying_groups",
+            ),
+        ),
     ),  # fmt: skip
     DimensionSCD2(
         "dw.dim_producto",
@@ -97,7 +117,14 @@ DIMENSIONES_SCD2 = (
             "peso_unitario",
             "cantidad_grupos",
         ),
-        tipo2=("precio_lista", "precio_venta_sugerido", "tasa_impuesto", "grupo_principal"),
+        tipo2=("precio_lista", "precio_venta_sugerido", "tasa_impuesto", "grupo_principal_id"),
+        nombres=(
+            (
+                "grupo_principal",
+                "grupo_principal_id",
+                "SELECT grupo_id, nombre FROM stg_ready.grupos_producto",
+            ),
+        ),
     ),  # fmt: skip
 )
 
@@ -158,7 +185,7 @@ def _cargar_scd2(
     dst: psycopg.Connection, d: DimensionSCD2, batch_id: int, reloj: str
 ) -> dict[str, int]:
     nk = d.clave_natural
-    todas = (*d.tipo1, *d.tipo2)
+    todas = (*d.tipo1, *d.tipo2, *(nombre for nombre, _, _ in d.nombres))
     hash_t2 = f"md5(ROW({', '.join(f's.{a}' for a in d.tipo2)})::text)"
     p = {"b": batch_id, "vigencia": reloj}
 
@@ -217,10 +244,22 @@ def _cargar_scd2(
         f"FROM _cambios c WHERE NOT c.mismo_periodo",
         p,
     ).rowcount
+
+    # 4. Nombres de la segmentación: se refrescan según el ID de cada versión
+    renombradas = 0
+    for nombre, col_id, referencia in d.nombres:
+        renombradas += dst.execute(
+            f"UPDATE {d.tabla} t SET {nombre} = r.nombre, batch_id = %(b)s "
+            f"FROM ({referencia}) AS r (id, nombre) "
+            f"WHERE t.{col_id} = r.id AND t.{nombre} IS DISTINCT FROM r.nombre "
+            f"AND t.{d.clave_sustituta} <> -1",
+            p,
+        ).rowcount
+
     dst.execute("DROP TABLE _src, _cambios")
     return {
         "nuevas": nuevas,
-        "actualizadas": tipo1 + en_lugar,
+        "actualizadas": tipo1 + en_lugar + renombradas,
         "versiones_nuevas": versiones,
     }
 

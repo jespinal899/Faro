@@ -68,7 +68,10 @@ SELECT s.stock_item_id                      AS producto_id,
        COALESCE(gp.nombre, 'Sin grupo')     AS grupo_principal,
        COALESCE(n.cantidad_grupos, 0)       AS cantidad_grupos,
        s.last_edited_when                   AS modificado_en,
-       s._batch_id                          AS batch_id
+       s._batch_id                          AS batch_id,
+       -- Identificador del grupo principal: la historia (SCD2) sigue al ID, no al nombre.
+       -- (Las columnas nuevas van al final: CREATE OR REPLACE VIEW no permite intercalarlas.)
+       pg.grupo_id                          AS grupo_principal_id
 FROM stg_clean.warehouse_stock_items s
 LEFT JOIN stg_clean.warehouse_colors c ON c.color_id = s.color_id
 LEFT JOIN stg_clean.warehouse_package_types pu ON pu.package_type_id = s.unit_package_id
@@ -99,7 +102,11 @@ SELECT c.customer_id                                   AS cliente_id,
        c.account_opened_date                           AS fecha_apertura,
        c.delivery_city_id                              AS ciudad_id,
        c.last_edited_when                              AS modificado_en,
-       c._batch_id                                     AS batch_id
+       c._batch_id                                     AS batch_id,
+       -- Identificadores de la segmentación: la historia (SCD2) sigue a los IDs, no a los
+       -- nombres (renombrar una categoría no es un cambio del cliente).
+       c.customer_category_id                          AS categoria_id,
+       c.buying_group_id                               AS grupo_compra_id   -- nulo = independiente
 FROM stg_clean.sales_customers c
 LEFT JOIN stg_clean.sales_customer_categories cat USING (customer_category_id)
 LEFT JOIN stg_clean.sales_buying_groups bg ON bg.buying_group_id = c.buying_group_id

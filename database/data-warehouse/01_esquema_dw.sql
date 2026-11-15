@@ -63,9 +63,13 @@ CREATE TABLE IF NOT EXISTS dw.dim_cliente (
     cliente_key            integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     cliente_id             integer NOT NULL,        -- clave natural (sales.customers)
     nombre                 text    NOT NULL,
-    categoria              text    NOT NULL,        -- SCD2
-    grupo_compra           text    NOT NULL,        -- SCD2 ('Independiente' = sin grupo)
-    cliente_facturacion    text    NOT NULL,        -- SCD2 (a quién se le factura)
+    -- SCD2: la historia sigue a los IDENTIFICADORES de la segmentación. Los nombres se
+    -- refrescan según su ID en todas las versiones (renombrar una categoría no versiona).
+    categoria_id           integer,                 -- SCD2
+    grupo_compra_id        integer,                 -- SCD2 (NULL = independiente)
+    cliente_facturacion_id integer NOT NULL,        -- SCD2 (a quién se le factura)
+    categoria              text    NOT NULL,        -- nombre de categoria_id
+    grupo_compra           text    NOT NULL,        -- nombre de grupo_compra_id ('Independiente')
     es_casa_matriz         boolean NOT NULL,
     politica_credito       text    NOT NULL,
     limite_credito         numeric(18,2),           -- NULL = no aplica (lo gestiona la casa matriz)
@@ -86,11 +90,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_dim_cliente_actual ON dw.dim_cliente (clien
 COMMENT ON TABLE dw.dim_cliente IS
     'Clientes con historia (SCD2) en su segmentación: categoría, grupo de compra y cliente de facturación.';
 
-INSERT INTO dw.dim_cliente (cliente_key, cliente_id, nombre, categoria, grupo_compra,
-    cliente_facturacion, es_casa_matriz, politica_credito, valido_desde, valido_hasta,
+INSERT INTO dw.dim_cliente (cliente_key, cliente_id, nombre, cliente_facturacion_id, categoria,
+    grupo_compra, es_casa_matriz, politica_credito, valido_desde, valido_hasta,
     es_actual, version, hash_tipo2, batch_id)
 OVERRIDING SYSTEM VALUE
-VALUES (-1, -1, 'Desconocido', 'Desconocido', 'Desconocido', 'Desconocido', false, 'Desconocido',
+VALUES (-1, -1, 'Desconocido', -1, 'Desconocido', 'Desconocido', false, 'Desconocido',
         '1900-01-01', '9999-12-31', true, 1, '-', 0)
 ON CONFLICT (cliente_key) DO NOTHING;
 
@@ -111,7 +115,8 @@ CREATE TABLE IF NOT EXISTS dw.dim_producto (
     precio_lista           numeric(18,2),           -- SCD2
     precio_venta_sugerido  numeric(18,2),           -- SCD2
     tasa_impuesto          numeric(18,3),           -- SCD2
-    grupo_principal        text    NOT NULL,        -- SCD2 (el grupo más específico)
+    grupo_principal_id     integer,                 -- SCD2 (el grupo más específico)
+    grupo_principal        text    NOT NULL,        -- nombre de grupo_principal_id (se refresca)
     cantidad_grupos        integer NOT NULL,
     valido_desde           date    NOT NULL,
     valido_hasta           date    NOT NULL,

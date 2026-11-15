@@ -115,6 +115,28 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
   versiona en Git y cualquiera puede regenerarla con un comando. El diagrama en Mermaid es
   editable y GitHub lo muestra directamente.
 
+## D-11 · Producción en Neon y despliegue continuo (CD)
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - Dos proyectos de Neon en la organización del autor, ambos con PostgreSQL 17 en
+    `aws-us-east-2` y rama `production`: **wwi-oltp** (base `wwi_oltp`) y
+    **faro-analytics** (base `faro_analytics`).
+  - La carga inicial de la fuente usa el mismo script que en local (`migrar_wwi.py`),
+    con conexión **directa** (sin *pooler*), como recomienda Neon para migraciones y
+    cargas masivas.
+  - **CD con GitHub Actions** (`cd-neon.yml`): al integrar a `main` un cambio del esquema,
+    lo aplica en Neon en una sola transacción y verifica el resultado con las pruebas de
+    integración contra producción.
+  - Las credenciales son *secrets* del *environment* `production` de GitHub, que solo
+    permite desplegar desde `main`.
+- **Alternativa considerada:** `neon init` + `neon.ts` + `neon deploy` (flujo de Neon para
+  apps JavaScript). Se descartó porque vincula la carpeta a un solo proyecto y Faro usa dos,
+  y porque agregaría dependencias de npm a un proyecto Python sin aportar nada para un
+  despliegue que solo usa Postgres.
+- **Pendiente (Fase 3):** reemplazar el rol dueño (`*_owner`) por roles de mínimo privilegio
+  para el ETL, la API y el asistente de IA.
+
 ---
 
 ## Pendientes

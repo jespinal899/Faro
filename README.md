@@ -1,6 +1,7 @@
 # Faro — Plataforma de Analítica Inteligente de Ventas
 
 [![CI](https://github.com/jespinal899/Faro/actions/workflows/ci.yml/badge.svg)](https://github.com/jespinal899/Faro/actions/workflows/ci.yml)
+[![CD - Neon](https://github.com/jespinal899/Faro/actions/workflows/cd-neon.yml/badge.svg)](https://github.com/jespinal899/Faro/actions/workflows/cd-neon.yml)
 
 > Así como un faro ilumina el camino, Faro convierte los datos operacionales
 > en información confiable para tomar decisiones.
@@ -18,6 +19,7 @@ Machine Learning, un asistente de IA generativa y alertas automáticas.
 | Bases de datos | PostgreSQL 17 — Docker (desarrollo) / Neon (producción) |
 | ETL y ML | Python 3.12 (gestionado con `uv`) |
 | Contenedores | Docker + Docker Compose |
+| CI/CD | GitHub Actions (CI en cada PR · CD a Neon desde `main`) |
 
 Las decisiones técnicas y su justificación están en
 [documentation/decisiones/registro-decisiones.md](documentation/decisiones/registro-decisiones.md).
@@ -29,7 +31,7 @@ Las decisiones técnicas y su justificación están en
 | Fase | Contenido | Estado |
 |---|---|---|
 | 0. Entorno | Python, Docker, PostgreSQL local, repositorio, CI | ✅ Completa |
-| 1. Descubrimiento | Cargar la fuente, ERD, diccionario, perfilado, preguntas analíticas | 🔄 En curso (falta desplegar en Neon) |
+| 1. Descubrimiento | Cargar la fuente (local y Neon), ERD, diccionario, perfilado, preguntas analíticas, CD | ✅ Completa |
 | 2. Diseño | Arquitectura, staging, grano, dimensiones | — |
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena | — |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | — |
@@ -88,12 +90,18 @@ sqlcmd -S localhost,14330 -U sa -C -b -i database/source/seed/01_restaurar_wwi.s
 # 3. Migrar a PostgreSQL: esquema + datos + reconciliación (~45 s, se puede repetir)
 uv run --group seed python database/source/seed/migrar_wwi.py
 
-# 4. (Al terminar la Fase 1) eliminar el SQL Server temporal
+# 4. PRODUCCIÓN (Neon): el mismo script, apuntando a la conexión directa de Neon
+$env:SOURCE_DATABASE_URL = (Select-String .env -Pattern '^NEON_SOURCE_DATABASE_URL=(.+)$').Matches[0].Groups[1].Value
+uv run --group seed python database/source/seed/migrar_wwi.py
+Remove-Item Env:SOURCE_DATABASE_URL
+
+# 5. (Al terminar la Fase 1) eliminar el SQL Server temporal
 docker compose --env-file .env -f database/source/seed/docker-compose.seed.yml down -v
 ```
 
-Resultado: 17 tablas y 644 488 filas, con conteos y sumas de control verificados.
-Evidencia en [documentation/pruebas/reconciliacion-carga-fuente-local.md](documentation/pruebas/reconciliacion-carga-fuente-local.md).
+Resultado: 17 tablas y 644 488 filas, con conteos y sumas de control verificados en cada
+entorno. Evidencia: [local](documentation/pruebas/reconciliacion-carga-fuente-local.md) ·
+[Neon](documentation/pruebas/reconciliacion-carga-fuente-neon.md).
 
 | Puerto | Servicio |
 |---|---|
@@ -112,7 +120,7 @@ uv run python database/scripts/perfilar_fuente.py     # perfil y 32 reglas de ca
 | [Diccionario de datos](documentation/modelos/diccionario-fuente.md) | 17 tablas, columnas, claves y linaje desde SQL Server |
 | [Diagrama entidad-relación](documentation/modelos/erd-fuente.md) | Diagrama Mermaid (visible en GitHub) |
 | [Perfil de datos](documentation/pruebas/perfil-fuente.md) | Reglas de calidad, distribuciones y perfil por columna |
-| [Reconciliación de la carga](documentation/pruebas/reconciliacion-carga-fuente-local.md) | Conteos y sumas de control origen vs destino |
+| Reconciliación de la carga ([local](documentation/pruebas/reconciliacion-carga-fuente-local.md) · [Neon](documentation/pruebas/reconciliacion-carga-fuente-neon.md)) | Conteos y sumas de control origen vs destino |
 
 ## Calidad y pruebas (lo mismo que ejecuta el CI)
 
@@ -135,9 +143,13 @@ uv run pytest -v               # pruebas (las de integración requieren la base 
    | Pruebas | `pytest` contra un PostgreSQL 17 temporal (misma versión que Neon) |
    | Validar docker-compose | que el archivo de Docker sea válido |
 
-4. Solo se integra a `main` si todos los jobs pasan.
-5. **CD (despliegue continuo):** se agrega por etapas, cuando exista algo que desplegar.
-   Primero los esquemas de base de datos hacia Neon (Fase 1) y después la aplicación (Fase 5).
+4. Solo se integra a `main` si todos los jobs pasan (regla de protección de la rama).
+   Se integra con *rebase* para conservar cada commit en el historial.
+5. **CD (despliegue continuo) — workflow `CD - Neon`:** cuando llega a `main` un cambio del
+   esquema de la fuente, lo aplica en Neon en una sola transacción y verifica el despliegue
+   con las pruebas de integración contra producción. También se puede lanzar a mano desde
+   *Actions → CD - Neon → Run workflow*. Las credenciales son *secrets* del *environment*
+   `production` (solo desde `main`). El despliegue de la aplicación se sumará en la Fase 5.
 
 ## Reiniciar el entorno desde cero
 

@@ -6,6 +6,9 @@ Variables:
   JWT_SECRET        Secreto para firmar las sesiones (mínimo 32 caracteres).
   JWT_MINUTOS       Duración de la sesión (por defecto 480 = 8 horas).
   COOKIE_SEGURA     "false" solo en desarrollo local sin HTTPS.
+  ANTHROPIC_API_KEY Clave del asistente de IA (sin ella el asistente responde "no configurado").
+  ASISTENTE_MODELO  Modelo del asistente (por defecto claude-haiku-5-5, el más económico).
+  ASISTENTE_LIMITE_HORA / ASISTENTE_LIMITE_DIA  Preguntas por usuario (20 / 100).
 """
 
 from __future__ import annotations
@@ -23,6 +26,9 @@ class Config:
     jwt_secret: str
     jwt_minutos: int
     cookie_segura: bool
+    asistente_modelo: str = "claude-haiku-5-5"
+    asistente_limite_hora: int = 20
+    asistente_limite_dia: int = 100
 
 
 @lru_cache
@@ -39,4 +45,7 @@ def config() -> Config:
         jwt_secret=secreto,
         jwt_minutos=int(os.getenv("JWT_MINUTOS", "480")),
         cookie_segura=os.getenv("COOKIE_SEGURA", "true").lower() != "false",
+        asistente_modelo=os.getenv("ASISTENTE_MODELO", "claude-haiku-5-5"),
+        asistente_limite_hora=int(os.getenv("ASISTENTE_LIMITE_HORA", "20")),
+        asistente_limite_dia=int(os.getenv("ASISTENTE_LIMITE_DIA", "100")),
     )

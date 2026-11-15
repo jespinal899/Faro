@@ -13,6 +13,8 @@ import pytest
 from dotenv import load_dotenv
 from psycopg.conninfo import make_conninfo
 
+from etl.config import TABLAS
+
 load_dotenv()
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -44,9 +46,15 @@ def bases():
     urls = {k: make_conninfo(url, dbname=v) for k, v in nombres.items()}
 
     with psycopg.connect(urls["fuente"]) as c:
-        for archivo in ESQUEMAS_FUENTE:
-            c.execute(archivo.read_text(encoding="utf-8"))
+        c.execute(ESQUEMAS_FUENTE[0].read_text(encoding="utf-8"))
         c.execute(DATOS.read_text(encoding="utf-8"))
+        for t in TABLAS:  # los datos traen IDs fijos: las secuencias siguen después del máximo
+            c.execute(
+                f"SELECT setval(pg_get_serial_sequence('{t.origen}', '{t.pk}'), "
+                f"(SELECT max({t.pk}) FROM {t.origen}))"
+            )
+        for archivo in ESQUEMAS_FUENTE[1:]:
+            c.execute(archivo.read_text(encoding="utf-8"))
     with psycopg.connect(urls["analitica"]) as c:
         for archivo in ESQUEMAS_STAGING:
             c.execute(archivo.read_text(encoding="utf-8"))

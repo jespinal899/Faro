@@ -3,7 +3,8 @@
 Por cada tabla, dentro de la base analítica:
   1. Descarta del lote las filas idénticas a la versión vigente (releídas por el solapamiento).
   2. Arma los candidatos: lo nuevo del lote más lo que sigue en cuarentena (reintento),
-     dejando una sola versión por clave natural (regla de supervivencia: la más reciente).
+     dejando una sola versión por clave natural (regla de supervivencia: la última versión extraída,
+     que es el estado actual de la fuente).
   3. Evalúa las reglas: las de cuarentena apartan el registro; las de marcar lo etiquetan.
   4. Limpia los textos y hace UPSERT en stg_clean (solo si el registro cambió).
   5. Da por resueltos los rechazos anteriores de registros que ahora sí pasaron.
@@ -76,7 +77,7 @@ def limpiar_tabla(
         f"  SELECT DISTINCT ON ({pk}) * FROM stg_raw.{t} "
         f"  WHERE _batch_id = %(b)s OR {pk} IN (SELECT natural_key FROM "
         f"    stg_quarantine.registro_rechazado WHERE source_table = %(t)s AND resolved_at IS NULL)"
-        f"  ORDER BY {pk}, last_edited_when DESC, _raw_id DESC) r",
+        f"  ORDER BY {pk}, _raw_id DESC) r",
         p,
     )
     res.candidatos = dst.execute("SELECT count(*) FROM _cand").fetchone()[0]
@@ -123,8 +124,7 @@ def limpiar_tabla(
         f"  ON CONFLICT ({pk}) DO UPDATE SET {asignaciones}, _batch_id = EXCLUDED._batch_id, "
         f"    _extracted_at = EXCLUDED._extracted_at, _row_hash = EXCLUDED._row_hash, "
         f"    _dq_flags = EXCLUDED._dq_flags "
-        f"  WHERE (c._row_hash <> EXCLUDED._row_hash OR c._dq_flags <> EXCLUDED._dq_flags) "
-        f"    AND EXCLUDED.last_edited_when >= c.last_edited_when "
+        f"  WHERE c._row_hash <> EXCLUDED._row_hash OR c._dq_flags <> EXCLUDED._dq_flags "
         f"  RETURNING (xmax = 0) AS es_nueva) "
         f"SELECT count(*) FILTER (WHERE es_nueva), count(*) FILTER (WHERE NOT es_nueva) "
         f"FROM cambios",

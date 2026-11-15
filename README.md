@@ -36,7 +36,7 @@ Las decisiones técnicas y su justificación están en
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena, zona ready, roles, simulador y ejecución horaria | ✅ Completa |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ✅ Completa |
 | 5. BI | API, dashboard y publicación en Vercel | ✅ Completa |
-| 6. ML y GenAI | Modelo predictivo y asistente | — |
+| 6. ML y GenAI | Modelo predictivo y asistente | 🔄 En curso (pronóstico entrenado y programado; faltan su vista en el dashboard y el asistente) |
 | 7. Automatización | Alertas y monitoreo | — |
 | 8. Integración | Pruebas end-to-end, despliegue, video | — |
 
@@ -47,6 +47,7 @@ Las decisiones técnicas y su justificación están en
 | [Arquitectura de la solución](documentation/arquitectura/arquitectura.md) | Capas, flujo de datos, entornos, decisiones de la guía, seguridad y monitoreo |
 | [Diseño del staging y del ETL](documentation/arquitectura/diseno-staging-etl.md) | Zonas, carga incremental, nulos, reglas de calidad, auditoría y recuperación |
 | [Modelo dimensional](documentation/modelos/modelo-dimensional.md) | Grano, esquema estrella, dimensiones, medidas, SCD y productos en varios grupos |
+| [Modelo de Machine Learning](documentation/modelos/modelo-ml.md) | Pronóstico semanal: problema, datos, variables, validación, líneas base, resultados, límites y experimentos |
 | [Registro de decisiones](documentation/decisiones/registro-decisiones.md) | D-01 a D-23, con alternativas y justificación |
 
 ---
@@ -294,6 +295,26 @@ uv run python -m etl.orchestration.pipeline             # el ETL carga lo nuevo
 En producción: *Actions → Simulador - Ventas* (una vez al día y a mano) y
 *Actions → ETL - Ventas* (cada hora y a mano).
 
+## Pronóstico de ventas (Machine Learning)
+
+Pronostica la venta neta de cada grupo de producto para las **4 semanas siguientes**, con un
+rango probable del 80 % (pregunta P10, decisión D-24). Se entrena **solo con ventas reales** y se
+compara contra 4 líneas base, con validación cruzada temporal de un año y 16 semanas de prueba.
+
+```powershell
+uv sync --group ml                                       # una vez: pandas, numpy, scikit-learn
+uv run --group ml python -m machine_learning entrenar    # entrena, evalúa y registra la versión
+uv run --group ml python -m machine_learning predecir    # pronostica con el modelo vigente
+```
+
+En producción: *Actions → ML - Pronóstico* (cada lunes, y a mano con la opción de reentrenar),
+con el rol `faro_ml`.
+
+| Documento | Contenido |
+|---|---|
+| [Modelo de ML](documentation/modelos/modelo-ml.md) | Problema, datos, variables, validación, resultados, utilidad, límites y experimentos |
+| Evaluación ([local](documentation/pruebas/evaluacion-ml-local.md) · [Neon](documentation/pruebas/evaluacion-ml-neon.md)) | Generada al entrenar: líneas base, candidatos, prueba por horizonte y grupo, cobertura del rango |
+
 ## Seguridad: roles de mínimo privilegio
 
 | Rol | Base | Puede | No puede |
@@ -301,14 +322,16 @@ En producción: *Actions → Simulador - Ventas* (una vez al día y a mano) y
 | `etl_lector` | fuente | Leer | Modificar nada |
 | `wwi_app` | fuente | Leer e insertar pedidos y facturas | Modificar o borrar |
 | `faro_etl` | analítica | Leer y escribir datos de staging y auditoría | Crear, alterar o borrar tablas |
+| `faro_api` | analítica | Leer las vistas aprobadas `api.*` y el control de sesión | Ver `dw`, staging o el modelo serializado |
+| `faro_ml` | analítica | Leer la serie `ml.ventas_semanales`, registrar modelos y pronósticos | Ver `dw`, borrar pronósticos o cambiar métricas |
 
 Los permisos están en [database/security/](database/security/) y los aplica el CD. Las
 contraseñas no están en el repositorio: se asignan (y se rotan) con
 
 ```powershell
 uv run python database/scripts/configurar_roles.py --entorno neon
-# y luego se suben a GitHub, sin mostrarlas:
-foreach ($v in "NEON_ETL_SOURCE_URL","NEON_APP_SOURCE_URL","NEON_ETL_ANALYTICS_URL") {
+# y luego se suben a GitHub, sin mostrarlas (la de faro_api va a Vercel):
+foreach ($v in "NEON_ETL_SOURCE_URL","NEON_APP_SOURCE_URL","NEON_ETL_ANALYTICS_URL","NEON_ML_ANALYTICS_URL") {
   (Select-String .env -Pattern "^$v=(.+)$").Matches[0].Groups[1].Value | gh secret set $v --env production
 }
 ```

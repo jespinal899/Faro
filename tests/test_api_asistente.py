@@ -25,7 +25,14 @@ from etl.orchestration import pipeline
 pytestmark = pytest.mark.integracion
 
 PASSWORD = "Contraseña-de-prueba-123"
-VARIABLES = ("API_DATABASE_URL", "JWT_SECRET", "COOKIE_SEGURA", "ANTHROPIC_API_KEY")
+VARIABLES = (
+    "API_DATABASE_URL",
+    "JWT_SECRET",
+    "COOKIE_SEGURA",
+    "ANTHROPIC_API_KEY",
+    "ASISTENTE_PROVEEDOR",
+    "GROQ_API_KEY",
+)
 
 
 @pytest.fixture(scope="module")
@@ -45,6 +52,7 @@ def entorno(bases):
         JWT_SECRET="a" * 48,
         COOKIE_SEGURA="false",
         ANTHROPIC_API_KEY="clave-de-prueba",  # el cliente es simulado: nunca sale a la red
+        ASISTENTE_PROVEEDOR="anthropic",  # el cliente simulado habla el dialecto de Anthropic
     )
     modulo_config.config.cache_clear()
     yield Url(analitica)
@@ -64,7 +72,7 @@ def _cliente_http(usuario: str = "analista") -> TestClient:
 
 def _simular(monkeypatch, *respuestas) -> ClienteSimulado:
     simulado = ClienteSimulado(*respuestas)
-    monkeypatch.setattr(rutas_asistente, "cliente", lambda: simulado)
+    monkeypatch.setattr(rutas_asistente, "cliente", lambda nombre: simulado)
     return simulado
 
 
@@ -125,7 +133,7 @@ def test_sin_sesion_y_entradas_invalidas(entorno, monkeypatch):
 
 
 def test_sin_clave_responde_no_configurado(entorno, monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")  # vacía: el .env local no la vuelve a cargar
     monkeypatch.setattr(rutas_asistente, "config", lambda: modulo_config.config())
     with _cliente_http() as c:
         assert c.get("/api/asistente/info").json()["disponible"] is False
@@ -151,7 +159,7 @@ def test_sin_saldo_en_el_servicio_de_ia_se_explica_y_se_registra(entorno, monkey
     class SinSaldo:
         messages = None
 
-        def __init__(self):
+        def __init__(self, nombre=None):
             self.messages = self
 
         def create(self, **kwargs):
@@ -189,3 +197,19 @@ def test_respuesta_json_serializable_con_consultas(entorno, monkeypatch):
     assert d["tipo"] == "sin_datos"
     assert "No hay ventas" in d["consultas"][0]["resultado"]["sin_datos"]
     json.dumps(d)
+
+
+def test_por_defecto_el_proveedor_es_groq_y_sin_su_clave_no_esta_configurado(entorno, monkeypatch):
+    monkeypatch.delenv("ASISTENTE_PROVEEDOR")
+    monkeypatch.setenv("GROQ_API_KEY", "")  # vacía: el .env local no la vuelve a cargar
+    modulo_config.config.cache_clear()
+    try:
+        with _cliente_http() as c:
+            info = c.get("/api/asistente/info").json()
+        assert (info["proveedor"], info["modelo"], info["disponible"]) == (
+            "groq",
+            "openai/gpt-oss-120b",
+            False,
+        )
+    finally:
+        modulo_config.config.cache_clear()

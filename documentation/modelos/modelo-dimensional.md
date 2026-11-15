@@ -172,9 +172,9 @@ significado: es estable, ordenable y facilita particionar.
 | Atributo | Origen | Tipo de cambio |
 |---|---|---|
 | `nombre` | `customers.customer_name` | Tipo 1 (las correcciones sobrescriben) |
-| `categoria` | `customer_categories` | **Tipo 2** |
-| `grupo_compra` | `buying_groups` (NULL → `'Independiente'`) | **Tipo 2** |
-| `cliente_facturacion` | `bill_to_customer_id` → nombre | **Tipo 2** |
+| `categoria_id` → `categoria` | `customer_categories` | **Tipo 2** sobre el ID; el nombre se refresca |
+| `grupo_compra_id` → `grupo_compra` | `buying_groups` (NULL → `'Independiente'`) | **Tipo 2** sobre el ID; el nombre se refresca |
+| `cliente_facturacion_id` | `bill_to_customer_id` | **Tipo 2** (su nombre se obtiene con el rol `cliente_facturacion_key` del hecho) |
 | `es_casa_matriz` | Otro cliente le factura a este | Tipo 1 |
 | `politica_credito` | Derivado (H08): `'Límite propio'` o `'Gestionado por casa matriz'` | Tipo 1 |
 | `limite_credito` | `credit_limit` (NULL = no aplica) | Tipo 1 |
@@ -194,7 +194,8 @@ historia se reescribiría y los informes de años pasados cambiarían solos.
 | `color` | `colors` (NULL → `'Sin color'`) | Tipo 1 |
 | `empaque_unidad`, `empaque_exterior`, `cantidad_por_empaque` | `package_types` | Tipo 1 |
 | `precio_lista`, `precio_venta_sugerido`, `tasa_impuesto` | `stock_items` | **Tipo 2** (el precio vigente al vender) |
-| `grupo_principal`, `cantidad_grupos` | Regla de la sección 6 | **Tipo 2** |
+| `grupo_principal_id` → `grupo_principal` | Regla de la sección 6 | **Tipo 2** sobre el ID; el nombre se refresca |
+| `cantidad_grupos` | Relación producto-grupo | Tipo 1 |
 
 ### 4.4 `dim_empleado`, `dim_geografia`, `dim_grupo_producto` (SCD Tipo 1)
 
@@ -304,9 +305,10 @@ GROUP BY 1;
 | Claves sustitutas | `integer GENERATED ALWAYS AS IDENTITY`, sin significado. Se resuelven **antes** de insertar los hechos. |
 | Claves naturales | Se conservan en dimensiones y hechos (trazabilidad, reasignación). |
 | Versión vigente | Índice único parcial: `(clave_natural) WHERE es_actual`. |
-| Detección de cambios | Hash de los atributos Tipo 2 (`hash_tipo2`): solo se versiona si cambió. |
+| Detección de cambios | Hash de los atributos Tipo 2 (`hash_tipo2`): solo se versiona si cambió. Los atributos Tipo 2 son **identificadores**, no nombres: renombrar una categoría o un grupo no es un cambio del cliente o del producto, y solo refresca el nombre en todas las versiones. |
 | Búsqueda de la versión al cargar un hecho | Clave natural + `fecha_factura BETWEEN valido_desde AND valido_hasta`. |
 | Primera versión | `valido_desde = 1900-01-01`, porque la fuente no trae historia previa: así las ventas históricas encuentran su versión. |
+| Inicio de una versión nueva | El día siguiente a la última venta cargada (**reloj de negocio**): las ventas ya registradas conservan el contexto que tenían. Si hay varios cambios antes de la siguiente venta, se corrige la versión vigente en lugar de crear versiones vacías. |
 | Miembro desconocido | Clave `-1`. Un hecho sin dimensión se carga con `-1` y queda registrado en `audit`. Una ejecución posterior lo **reasigna** cuando la dimensión aparece. |
 
 ## 8. Matriz de bus (dimensiones conformadas)

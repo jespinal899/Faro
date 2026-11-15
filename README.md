@@ -321,13 +321,12 @@ con el rol `faro_ml`.
 ## Asistente de IA (Claude)
 
 Responde en lenguaje natural preguntas sobre las ventas (pregunta P11, decisión D-25), en la
-pestaña **Asistente (IA)** del dashboard. El modelo (**Claude Haiku 5.5**) no escribe SQL: solo
+pestaña **Asistente (IA)** del dashboard. El modelo (**gpt-oss-120b en Groq**, gratis) no escribe SQL: solo
 pide 4 consultas controladas que el servidor valida y ejecuta con el rol de solo lectura. Cada
 cifra cita la consulta que la respalda; las predicciones y las interpretaciones van aparte.
 
-- **Configuración:** `ANTHROPIC_API_KEY` en el `.env` y en Vercel (*sensitive*). El uso de la API se
-  paga con créditos de la consola de Anthropic, aparte del plan de Claude; cuesta menos de US$0.002
-  por pregunta.
+- **Configuración:** `GROQ_API_KEY` (gratuita, de https://console.groq.com) en el `.env` y en Vercel
+  (*sensitive*). El proveedor se cambia con `ASISTENTE_PROVEEDOR` (`groq`, `ollama` o `anthropic`).
 - **Pruebas con el modelo real:** `uv run python generative-ai/evaluar_asistente.py` (14 preguntas,
   ver [generative-ai/](generative-ai/)).
 

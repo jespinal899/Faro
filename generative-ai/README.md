@@ -17,7 +17,8 @@ Esta carpeta tiene las **pruebas con el modelo real**:
 | [evaluar_asistente.py](evaluar_asistente.py) | Hace cada pregunta y genera el reporte en `documentation/pruebas/` |
 
 ```powershell
-# Requiere ANTHROPIC_API_KEY en .env y saldo en la cuenta de Anthropic (cuesta unos centavos)
+# Requiere GROQ_API_KEY en .env (plan gratuito de Groq). --pausa espacia las preguntas para
+# respetar el límite de tokens por minuto (por defecto 20 s).
 uv run python generative-ai/evaluar_asistente.py          # API en proceso + base local
 uv run python generative-ai/evaluar_asistente.py --neon   # API en proceso + Neon (producción)
 ```
@@ -26,8 +27,10 @@ uv run python generative-ai/evaluar_asistente.py --neon   # API en proceso + Neo
 
 | Variable | Dónde | Valor |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | `.env` local y Vercel (*sensitive*) | Clave de la consola de Anthropic |
-| `ASISTENTE_MODELO` | Opcional | Por defecto `claude-haiku-5-5` (el más económico) |
+| `ASISTENTE_PROVEEDOR` | Opcional | `groq` (por defecto, gratis), `ollama` (local) o `anthropic` (Claude, de pago) |
+| `GROQ_API_KEY` | `.env` local y Vercel (*sensitive*) | Clave gratuita de https://console.groq.com |
+| `ANTHROPIC_API_KEY` / `OLLAMA_BASE_URL` | Opcional | Solo para esos proveedores |
+| `ASISTENTE_MODELO` | Opcional | Por defecto el del proveedor (`openai/gpt-oss-120b` en Groq) |
 | `ASISTENTE_LIMITE_HORA` / `ASISTENTE_LIMITE_DIA` | Opcional | 20 / 100 preguntas por usuario |
 
 Diseño completo, requisitos de seguridad de la guía y costos:

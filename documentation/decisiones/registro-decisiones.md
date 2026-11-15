@@ -406,6 +406,19 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
   - 13 pruebas del motor, 6 de la API y 5 del dashboard, todas sin red ni costo.
   - Una evaluación con el modelo real, de 14 preguntas, con valores esperados por SQL independiente.
   - Ver [asistente-ia.md](../arquitectura/asistente-ia.md).
+- **Actualización (2026-11-15): proveedor por defecto Groq, gratuito.**
+  - **Motivo:** la API de Anthropic exige una recarga mínima de US$5, y el usuario no puede
+    pagarla. GitHub Models, otra opción gratuita, fue retirado en julio de 2026.
+  - **Decisión:** el proveedor es intercambiable (`ASISTENTE_PROVEEDOR`). Por defecto se usa
+    **Groq** con `openai/gpt-oss-120b`: plan gratuito sin tarjeta, funciona en producción
+    (Vercel) y responde en 2 a 5 segundos. Ollama queda como respaldo local, y Claude sigue
+    disponible si hubiera presupuesto.
+  - **Consecuencias, medidas en la cuenta:**
+    - 1,000 solicitudes por día y **8,000 tokens por minuto**: 1 o 2 preguntas por minuto.
+    - Groq no permite JSON junto con herramientas, así que la respuesta final llega por la
+      herramienta `responder`.
+    - Groq no retiene datos de inferencia por defecto.
+    - La seguridad, las herramientas, la verificación de citas y las pruebas no cambian.
 
 ---
 

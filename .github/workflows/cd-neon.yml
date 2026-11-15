@@ -6,7 +6,7 @@
 #
 # Qué hace:
 #   1. Aplica en Neon, cada uno en UNA transacción, el esquema de la fuente (wwi_oltp)
-#      y los esquemas de staging y auditoría (faro_analytics), con los permisos de los
+#      y los esquemas de staging, auditoría y Data Warehouse (faro_analytics), con los permisos de los
 #      roles de mínimo privilegio (database/security). Las contraseñas no pasan por aquí.
 #      El esquema es idempotente: re-aplicarlo no altera los datos existentes.
 #   2. Verifica el despliegue con las pruebas de integración contra Neon.
@@ -22,6 +22,7 @@ on:
     paths:
       - "database/source/*.sql"
       - "database/staging/**"
+      - "database/data-warehouse/**"
       - "database/security/**"
       - ".github/workflows/cd-neon.yml"
   workflow_dispatch:
@@ -83,7 +84,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   staging:
-    name: Desplegar staging y auditoría (faro_analytics)
+    name: Desplegar staging, auditoría y Data Warehouse (faro_analytics)
     runs-on: ubuntu-latest
     environment: production
     env:
@@ -95,22 +96,23 @@ jobs:
         run: |
           test -n "$NEON_ANALYTICS_DATABASE_URL" || { echo "::error::Falta el secret NEON_ANALYTICS_DATABASE_URL"; exit 1; }
 
-      - name: Aplicar esquemas y permisos de staging en Neon (una transacción)
+      - name: Aplicar staging, DW y permisos en Neon (una transacción)
         run: |
           psql "$NEON_ANALYTICS_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -q \
             -c "SET client_min_messages TO warning" \
             $(ls database/staging/*.sql | sort | sed 's/^/-f /') \
+            $(ls database/data-warehouse/*.sql | sort | sed 's/^/-f /') \
             -f database/security/roles_analitica.sql
 
       - name: Resumen del despliegue
         run: |
           {
-            echo "## Neon · faro_analytics: staging desplegado"
+            echo "## Neon · faro_analytics: staging y Data Warehouse desplegados"
             echo ""
             echo "| Esquema | Tablas |"
             echo "|---|---:|"
             psql "$NEON_ANALYTICS_DATABASE_URL" -At -F ' | ' -c "
               SELECT table_schema, count(*) FROM information_schema.tables
-              WHERE table_schema IN ('audit', 'stg_raw', 'stg_clean', 'stg_quarantine')
+              WHERE table_schema IN ('audit', 'stg_raw', 'stg_clean', 'stg_quarantine', 'dw')
               GROUP BY 1 ORDER BY 1" | sed 's/^/| /; s/$/ |/'
           } >> "$GITHUB_STEP_SUMMARY"

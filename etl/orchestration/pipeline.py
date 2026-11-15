@@ -1,8 +1,10 @@
-"""Pipeline de staging de ventas: fuente -> stg_raw -> stg_clean / cuarentena.
+"""Pipeline de ventas de Faro: fuente -> staging -> Data Warehouse.
+
+    fuente -> stg_raw -> stg_clean / cuarentena -> stg_ready -> dw (dimensiones + hechos)
 
 Uso (desde la raíz del repositorio):
     uv run python -m etl.orchestration.pipeline                  # incremental (por defecto)
-    uv run python -m etl.orchestration.pipeline --modo inicial   # vacía staging y recarga todo
+    uv run python -m etl.orchestration.pipeline --modo inicial   # vacía staging y DW y recarga todo
 
 Garantías:
   - Todo o nada: los datos, los pasos de auditoría y los watermarks se confirman en UNA
@@ -32,6 +34,7 @@ from psycopg import sql
 from etl.config import PIPELINE, TABLAS, reglas_de
 from etl.db import conectar
 from etl.extraction.extraer import columnas_de, extraer_tabla
+from etl.loading.cargar_dw import cargar_dw, reconciliar_dw
 from etl.transformation.limpiar import limpiar_tabla
 
 log = logging.getLogger("etl.pipeline")
@@ -48,7 +51,11 @@ class Resumen:
     actualizadas: int = 0
     rechazadas: int = 0
     sin_cambios: int = 0
-    reconciliado: bool | None = None
+    reconciliado: bool | None = None  # staging y DW
+    dw_hechos_nuevos: int = 0
+    dw_hechos_actualizados: int = 0
+    dw_versiones_nuevas: int = 0
+    dw_hechos_con_desconocido: int = 0
     error: str | None = None
 
 
@@ -209,7 +216,45 @@ def _procesar(src, dst, batch_id: int, modo: str, resumen: Resumen) -> None:
             lim.sin_cambios,
         )
 
-    resumen.reconciliado = _reconciliar(src, dst, batch_id)
+    staging_ok = _reconciliar(src, dst, batch_id)
+
+    # Data Warehouse: dimensiones, puente y hechos, en la misma transacción
+    dw = cargar_dw(dst, batch_id, inicial=(modo == "inicial"))
+    for tabla, c in dw.dimensiones.items():
+        _registrar_paso(
+            dst, batch_id, "load_dim", tabla.replace("dw.", "stg_ready."), tabla,
+            rows_inserted=c["nuevas"] + c.get("versiones_nuevas", 0),
+            rows_updated=c["actualizadas"],
+        )  # fmt: skip
+    _registrar_paso(
+        dst, batch_id, "load_fact", "stg_ready.ventas", "dw.fact_ventas",
+        rows_inserted=dw.hechos_nuevos, rows_updated=dw.hechos_actualizados,
+        duration_ms=dw.duracion_ms,
+        status="ok" if dw.hechos_con_desconocido == 0 else "con_desconocidos",
+    )  # fmt: skip
+    _, detalle = reconciliar_dw(dst)
+    _registrar_paso(
+        dst, batch_id, "reconcile_dw", "stg_ready.ventas", "dw.fact_ventas",
+        rows_read=detalle["filas_ready"], rows_inserted=detalle["filas_dw"],
+        status="ok" if dw.reconciliado else "diferencia",
+    )  # fmt: skip
+    if not dw.reconciliado:
+        log.warning("Reconciliación del DW con diferencias: %s", detalle)
+    if dw.hechos_con_desconocido:
+        log.warning(
+            "%d hechos usan el miembro desconocido (-1); se reasignarán cuando llegue la dimensión",
+            dw.hechos_con_desconocido,
+        )
+    versiones = sum(c.get("versiones_nuevas", 0) for c in dw.dimensiones.values())
+    log.info(
+        "  %-36s hechos nuevos=%-7d actualizados=%-5d versiones SCD2 nuevas=%d",
+        "dw (Data Warehouse)", dw.hechos_nuevos, dw.hechos_actualizados, versiones,
+    )  # fmt: skip
+    resumen.dw_hechos_nuevos = dw.hechos_nuevos
+    resumen.dw_hechos_actualizados = dw.hechos_actualizados
+    resumen.dw_versiones_nuevas = versiones
+    resumen.dw_hechos_con_desconocido = dw.hechos_con_desconocido
+    resumen.reconciliado = staging_ok and dw.reconciliado
 
     # Los watermarks avanzan al final y en la misma transacción que los datos
     for ext, _ in extracciones:
@@ -268,7 +313,9 @@ def ejecutar(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Pipeline de staging de ventas de Faro")
+    parser = argparse.ArgumentParser(
+        description="Pipeline de ventas de Faro (staging + Data Warehouse)"
+    )
     parser.add_argument("--modo", choices=["incremental", "inicial"], default="incremental")
     parser.add_argument("--disparador", choices=["manual", "cron", "ci"], default="manual")
     args = parser.parse_args()
@@ -290,15 +337,12 @@ def main() -> int:
         return 1
     log.info(
         "OK ejecución %d: leídas=%d nuevas=%d actualizadas=%d rechazadas=%d sin cambios=%d "
-        "reconciliado=%s",
-        r.execution_id,
-        r.leidas,
-        r.insertadas,
-        r.actualizadas,
-        r.rechazadas,
-        r.sin_cambios,
-        r.reconciliado,
-    )
+        "| DW: hechos nuevos=%d actualizados=%d versiones SCD2=%d desconocidos=%d "
+        "| reconciliado=%s",
+        r.execution_id, r.leidas, r.insertadas, r.actualizadas, r.rechazadas, r.sin_cambios,
+        r.dw_hechos_nuevos, r.dw_hechos_actualizados, r.dw_versiones_nuevas,
+        r.dw_hechos_con_desconocido, r.reconciliado,
+    )  # fmt: skip
     return 0
 
 

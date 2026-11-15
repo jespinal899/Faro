@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-PIPELINE = "ventas_staging"
+PIPELINE = "ventas"
 
 # Ventana hacia atrás del watermark: cubre transacciones confirmadas con retraso
 SOLAPAMIENTO = "10 minutes"

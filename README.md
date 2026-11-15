@@ -44,7 +44,7 @@ Las decisiones técnicas y su justificación están en
 | 5. BI | API, dashboard y publicación en Vercel | ✅ Completa |
 | 6. ML y GenAI | Pronóstico de ventas y asistente de IA | ✅ Completa |
 | 7. Automatización | Alertas y monitoreo | ✅ Completa · pendiente documentado: [disparador programado fiable](documentation/arquitectura/alertas.md#9-pendiente-un-disparador-programado-fiable) |
-| 8. Integración | Prueba de punta a punta, requerimientos, diagramas, plan de pruebas y manuales | ✅ Completa (el video lo graba el autor) |
+| 8. Integración | Prueba de punta a punta, requerimientos, diagramas, plan de pruebas y manuales | ✅ Completa (video grabado) |
 
 ### Documentación de diseño
 

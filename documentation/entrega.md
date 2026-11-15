@@ -27,7 +27,7 @@ general y los comandos están en el [README](../README.md).
 | README permite ejecutar la solución | ✅ | [README](../README.md) · [Manual de instalación](manuales/manual-instalacion.md) |
 | Repositorio libre de secretos | ✅ | `.env` ignorado; [.env.example](../.env.example) sin valores reales; secrets en GitHub y Vercel |
 | Diagramas, manuales y resultados de pruebas entregados | ✅ | Secciones 2 y 3 de este índice |
-| Video y demo funcional completos | 🎬 | A cargo del autor |
+| Video y demo funcional completos | ✅ | Video de 5 minutos grabado; el enlace va en el documento de entrega. Demo en vivo en la presentación. |
 
 ## 2. Documentación obligatoria (guía, sección 11)
 
@@ -76,7 +76,7 @@ general y los comandos están en el [README](../README.md).
 | Generative AI | 10 % | [Asistente](arquitectura/asistente-ia.md), [14 de 14](pruebas/pruebas-asistente-neon.md), captura 08 |
 | Automatización | 5 % | [Alertas](arquitectura/alertas.md), capturas 09 a 11 |
 | Pruebas y documentación | 10 % | [Plan de pruebas](pruebas/plan-de-pruebas.md), [manuales](manuales/) |
-| Demo y comunicación | 5 % | Video y demo en vivo (a cargo del autor) |
+| Demo y comunicación | 5 % | Video de 5 minutos (enlace en el documento de entrega) y demo en vivo |
 
 ## 5. Pendientes y límites conocidos (declarados)
 

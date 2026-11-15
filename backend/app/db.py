@@ -16,7 +16,7 @@ from contextlib import contextmanager
 import psycopg
 from psycopg.rows import dict_row
 
-from backend.app.config import config
+from .config import config
 
 TIEMPO_MAXIMO_CONSULTA = "8s"
 

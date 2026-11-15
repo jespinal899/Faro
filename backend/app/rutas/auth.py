@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel, Field
 
-from backend.app.seguridad import (
+from ..seguridad import (
     CuentaBloqueada,
     Usuario,
     UsuarioActual,

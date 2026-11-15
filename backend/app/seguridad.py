@@ -16,8 +16,8 @@ from argon2.exceptions import InvalidHashError, VerificationError
 from fastapi import Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel
 
-from backend.app.config import config
-from backend.app.db import escritura
+from .config import config
+from .db import escritura
 
 COOKIE = "faro_sesion"
 ALGORITMO = "HS256"

@@ -25,7 +25,7 @@ async function esperarAnimaciones(page: Page) {
   );
 }
 
-test("flujo completo: sesión, KPI, filtros, drill-down, detalle, modo oscuro, móvil, pronóstico y asistente", async ({ page }) => {
+test("flujo completo: sesión, KPI, filtros, drill-down, detalle, modo oscuro, móvil, pronóstico, asistente, alertas y operación", async ({ page }) => {
   test.skip(!PASSWORD, "Falta FARO_PASSWORD_DEMO en .env");
 
   // 1. Inicio de sesión
@@ -109,7 +109,37 @@ test("flujo completo: sesión, KPI, filtros, drill-down, detalle, modo oscuro, m
   await esperarAnimaciones(page);
   await page.screenshot({ path: `${CAPTURAS}/08-asistente.png`, fullPage: true });
 
-  // 10. Cerrar sesión
+  // 10. Alertas: la lista con su contador; el detalle separa lo calculado de lo GENERADO POR IA y
+  //     muestra cada intento de correo. Se marca como atendida y se reabre (queda como estaba).
+  await page.getByRole("tab", { name: /Alertas/ }).click();
+  await expect(page.getByText("Alertas automáticas")).toBeVisible();
+  const alertas = tarjeta(page, "Alertas");
+  await alertas.getByText(/^Todas \(\d+\)$/).click();
+  await expect(alertas.locator("tr.ant-table-row").first()).toBeVisible();
+  await page.screenshot({ path: `${CAPTURAS}/09-alertas.png`, fullPage: true });
+  await alertas.getByRole("button", { name: "Ver detalle" }).first().click();
+  const detalleAlerta = page.getByRole("dialog");
+  await expect(detalleAlerta.getByText("GENERADO POR IA")).toBeVisible();
+  await expect(tarjeta(page, "Entrega por correo").locator("tr.ant-table-row").first()).toBeVisible();
+  await esperarAnimaciones(page);
+  await page.screenshot({ path: `${CAPTURAS}/10-alerta-detalle.png` });
+  for (const [opcion, guardado] of [["Atendida", "Atendida"], ["Nueva (reabrir)", "Nueva"]]) {
+    await detalleAlerta.getByLabel("Nuevo estado").click();
+    await page.getByTitle(opcion, { exact: true }).click();
+    await detalleAlerta.getByRole("button", { name: "Guardar estado" }).click();
+    await expect(detalleAlerta.getByText(`Estado guardado: ${guardado}.`)).toBeVisible();
+  }
+  await page.keyboard.press("Escape");
+
+  // 11. Operación: ejecuciones del ETL, calidad por dimensión, modelo vigente y notificaciones
+  await page.getByRole("tab", { name: /Operación/ }).click();
+  await expect(page.getByText(/^Ejecuciones del ETL/)).toBeVisible();
+  await expect(tarjeta(page, "Calidad de datos por dimensión").locator("tr.ant-table-row").first()).toBeVisible();
+  await expect(tarjeta(page, "Modelo de pronóstico vigente")).toContainText("Versión");
+  await expect(tarjeta(page, "Notificaciones")).toContainText("Correos enviados");
+  await page.screenshot({ path: `${CAPTURAS}/11-operacion.png`, fullPage: true });
+
+  // 12. Cerrar sesión
   await page.getByRole("button", { name: /Usuario Demo/ }).hover();
   await page.getByText("Cerrar sesión").click();
   await expect(page.getByRole("button", { name: /ingresar/i })).toBeVisible();

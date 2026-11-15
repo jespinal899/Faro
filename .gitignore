@@ -31,8 +31,10 @@ data/raw/
 # ===== Herramientas de agentes / Neon =====
 # Vínculo local con el proyecto de Neon (IDs de org/proyecto/rama de cada desarrollador)
 .neon
-# Preferencias personales de Claude Code (las compartidas van en .claude/settings.json)
-.claude/settings.local.json
+# Configuración local del asistente de código (skills, servidores MCP): no es parte de la solución
+.claude/
+.mcp.json
+skills-lock.json
 # Vínculo local con el proyecto de Vercel (lo crea "vercel link"; sus variables van en .env.local)
 .vercel
 

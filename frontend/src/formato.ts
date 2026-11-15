@@ -37,3 +37,5 @@ export const fFecha = (iso: string | null | undefined) => (iso ? dayjs(iso).form
 export const fFechaHora = (iso: string | null | undefined) => (iso ? dayjs(iso).format("DD/MM/YYYY HH:mm") : SIN_DATO);
 export const fMes = (iso: string) => dayjs(iso).format("MMM YYYY");
 export const fDia = (iso: string) => dayjs(iso).format("DD MMM YYYY");
+/** Semana por su lunes: "30 may 16". */
+export const fSemana = (iso: string) => dayjs(iso).format("DD MMM YY");

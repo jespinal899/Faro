@@ -128,3 +128,92 @@ export interface EstadoDatos {
   lineas: number;
   lineas_simuladas: number;
 }
+
+// ------------------------------------------------- pronóstico (Machine Learning)
+// Son PREDICCIONES registradas por el modelo, no datos históricos.
+
+export interface PuntoHistoria {
+  semana: string;
+  venta_neta: number;
+  incluye_simulados: boolean;
+}
+
+export interface PuntoPronostico {
+  semana: string;
+  horizonte: number;
+  venta_neta: number;
+  inferior: number;
+  superior: number;
+}
+
+export interface PuntoSeguimiento {
+  origen: string;
+  semana: string;
+  horizonte: number;
+  pronostico: number;
+  inferior: number;
+  superior: number;
+  real: number;
+  real_incluye_simulados: boolean;
+}
+
+export interface SerieGrupo {
+  grupo: string;
+  historia: PuntoHistoria[];
+  pronostico: PuntoPronostico[];
+  seguimiento: PuntoSeguimiento[];
+  wape_prueba: number | null;
+  wape_prueba_linea_base: number | null;
+}
+
+export interface CalidadHorizonte {
+  horizonte: number;
+  wape_modelo: number;
+  wape_linea_base: number;
+  cobertura_pct: number;
+}
+
+export interface CalidadModelo {
+  metrica: "wape";
+  linea_base: string;
+  linea_base_descripcion: string;
+  wape_validacion_modelo: number;
+  wape_validacion_linea_base: number;
+  wape_prueba_modelo: number;
+  wape_prueba_linea_base: number;
+  mejora_prueba_pct: number;
+  cobertura_objetivo_pct: number;
+  cobertura_prueba_pct: number;
+  por_horizonte: CalidadHorizonte[];
+}
+
+export interface ModeloPronostico {
+  version: string;
+  algoritmo: string;
+  entrenado_en: string;
+  datos_desde: string;
+  datos_hasta: string;
+  prueba_desde: string;
+  commit_codigo: string | null;
+  calidad: CalidadModelo;
+}
+
+export interface RespuestaPronostico {
+  disponible: boolean;
+  modelo: ModeloPronostico | null;
+  origen: string | null;
+  generado_en: string | null;
+  usa_datos_simulados: boolean;
+  grupos: SerieGrupo[];
+  excluidos: { grupo: string; motivo: string }[];
+}
+
+export interface PuntoPrueba {
+  semana: string;
+  origen: string;
+  real: number;
+  pronostico: number;
+  inferior: number;
+  superior: number;
+  linea_base: number;
+}

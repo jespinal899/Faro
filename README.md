@@ -93,7 +93,7 @@ docker compose --env-file .env -f database/source/seed/docker-compose.seed.yml d
 ```
 
 Resultado: 17 tablas y 644 488 filas, con conteos y sumas de control verificados.
-Evidencia en [documentation/pruebas/reconciliacion-carga-fuente.md](documentation/pruebas/reconciliacion-carga-fuente.md).
+Evidencia en [documentation/pruebas/reconciliacion-carga-fuente-local.md](documentation/pruebas/reconciliacion-carga-fuente-local.md).
 
 | Puerto | Servicio |
 |---|---|
@@ -112,7 +112,7 @@ uv run python database/scripts/perfilar_fuente.py     # perfil y 32 reglas de ca
 | [Diccionario de datos](documentation/modelos/diccionario-fuente.md) | 17 tablas, columnas, claves y linaje desde SQL Server |
 | [Diagrama entidad-relación](documentation/modelos/erd-fuente.md) | Diagrama Mermaid (visible en GitHub) |
 | [Perfil de datos](documentation/pruebas/perfil-fuente.md) | Reglas de calidad, distribuciones y perfil por columna |
-| [Reconciliación de la carga](documentation/pruebas/reconciliacion-carga-fuente.md) | Conteos y sumas de control origen vs destino |
+| [Reconciliación de la carga](documentation/pruebas/reconciliacion-carga-fuente-local.md) | Conteos y sumas de control origen vs destino |
 
 ## Calidad y pruebas (lo mismo que ejecuta el CI)
 

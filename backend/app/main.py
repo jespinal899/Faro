@@ -16,8 +16,8 @@ import psycopg
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from backend.app.db import lectura
-from backend.app.rutas import auth, datos
+from .db import lectura
+from .rutas import auth, datos
 
 log = logging.getLogger("faro.api")
 

@@ -13,9 +13,9 @@ from fastapi import APIRouter, HTTPException, Path, Query, status
 from psycopg import sql
 from pydantic import BaseModel
 
-from backend.app.db import lectura
-from backend.app.filtros import Filtros, FiltrosQuery
-from backend.app.seguridad import UsuarioActual
+from ..db import lectura
+from ..filtros import Filtros, FiltrosQuery
+from ..seguridad import UsuarioActual
 
 router = APIRouter(tags=["Datos del dashboard"])
 

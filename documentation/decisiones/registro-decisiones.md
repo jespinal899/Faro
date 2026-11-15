@@ -420,11 +420,41 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
     - Groq no retiene datos de inferencia por defecto.
     - La seguridad, las herramientas, la verificación de citas y las pruebas no cambian.
 
+## D-26 · Alertas: reglas en la base, evaluación tras cada carga y correo por Gmail
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - **Reglas:** tres, P12 a P14: caída de ventas (regla de negocio), pronóstico bajo umbral
+    (ML) y ventas bajo costo (regla de negocio). Sus umbrales viven en `alerta.regla`. La
+    explicación y la acción recomendada las genera la IA (Groq) y se identifican como tales.
+  - **Cuándo:** el evaluador corre al terminar cada carga del ETL y cada pronóstico, y también a
+    mano. Siempre mira la última semana completa.
+  - **Sin duplicados:** clave única por evento (regla | entidad | período).
+  - **Correo:** Gmail por SMTP con contraseña de aplicación. Hasta 3 intentos por evaluación y 6
+    en total; cada intento queda registrado.
+  - **Dashboard:** una pestaña con polling (Vercel no admite WebSockets).
+  - **Rol propio `faro_alertas`:** lee solo las vistas de entrada y el pronóstico, y escribe
+    alertas y envíos.
+- **Alternativas consideradas:**
+  - Un proveedor de correo (Brevo, Resend): otra cuenta y otra clave, sin ventaja para la demo.
+  - WebSockets: Vercel no los admite.
+  - RabbitMQ o Redis: no hace falta mensajería para tres reglas en micro-lotes.
+  - Disparadores en la base (triggers): mezclarían la lógica de negocio con la carga.
+- **Consecuencias:**
+  - La frecuencia real depende de que GitHub ejecute el ETL programado; hoy lo hace de forma muy
+    irregular.
+  - Para la demo hay un workflow de **evento simulado**, identificado como simulación, como
+    permite la guía.
+- **Evidencia:**
+  - 15 pruebas unitarias y 5 de integración.
+  - Evaluación local real: alerta de ventas bajo costo con explicación de IA y correo recibido,
+    sin duplicarse en la segunda evaluación.
+  - Ver [alertas.md](../arquitectura/alertas.md).
+
 ---
 
 ## Pendientes
 
 | Tema | Fase |
 |---|---|
-| Canales de notificación | 7 |
 | Disparador fiable para los procesos programados (GitHub retrasa o descarta los cron) | 7 |

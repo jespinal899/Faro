@@ -37,7 +37,7 @@ Las decisiones técnicas y su justificación están en
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ✅ Completa |
 | 5. BI | API, dashboard y publicación en Vercel | ✅ Completa |
 | 6. ML y GenAI | Pronóstico de ventas y asistente de IA | ✅ Completa |
-| 7. Automatización | Alertas y monitoreo | — |
+| 7. Automatización | Alertas y monitoreo | 🚧 En curso (alertas listas) |
 | 8. Integración | Pruebas end-to-end, despliegue, video | — |
 
 ### Documentación de diseño
@@ -49,7 +49,8 @@ Las decisiones técnicas y su justificación están en
 | [Modelo dimensional](documentation/modelos/modelo-dimensional.md) | Grano, esquema estrella, dimensiones, medidas, SCD y productos en varios grupos |
 | [Modelo de Machine Learning](documentation/modelos/modelo-ml.md) | Pronóstico semanal: problema, datos, variables, validación, líneas base, resultados, límites y experimentos |
 | [Asistente de IA](documentation/arquitectura/asistente-ia.md) | Arquitectura segura, herramientas, configuración, costo, límites y pruebas |
-| [Registro de decisiones](documentation/decisiones/registro-decisiones.md) | D-01 a D-23, con alternativas y justificación |
+| [Alertas y automatización](documentation/arquitectura/alertas.md) | Reglas, contenido, canales, frecuencia, duplicados, reintentos, estados y pruebas |
+| [Registro de decisiones](documentation/decisiones/registro-decisiones.md) | D-01 a D-26, con alternativas y justificación |
 
 ---
 
@@ -319,7 +320,7 @@ con el rol `faro_ml`.
 | [Modelo de ML](documentation/modelos/modelo-ml.md) | Problema, datos, variables, validación, resultados, utilidad, límites y experimentos |
 | Evaluación ([local](documentation/pruebas/evaluacion-ml-local.md) · [Neon](documentation/pruebas/evaluacion-ml-neon.md)) | Generada al entrenar: líneas base, candidatos, prueba por horizonte y grupo, cobertura del rango |
 
-## Asistente de IA (Claude)
+## Asistente de IA
 
 Responde en lenguaje natural preguntas sobre las ventas (pregunta P11, decisión D-25), en la
 pestaña **Asistente (IA)** del dashboard. El modelo (**gpt-oss-120b en Groq**, gratis) no escribe SQL: solo
@@ -331,6 +332,26 @@ cifra cita la consulta que la respalda; las predicciones y las interpretaciones 
 - **Pruebas con el modelo real:** `uv run python generative-ai/evaluar_asistente.py` (14 preguntas,
   ver [generative-ai/](generative-ai/)).
 
+## Alertas y notificaciones
+
+Al terminar cada carga del ETL y cada pronóstico se evalúan tres reglas (preguntas P12 a P14,
+decisión D-26): **caída de ventas** frente a las 4 semanas anteriores, **pronóstico bajo umbral**
+(ML) y **ventas bajo costo**. Cada alerta nueva se registra una sola vez, recibe una explicación
+y una acción recomendada **generadas por IA** (marcadas como tales) y se envía por **correo**
+(Gmail, hasta 3 intentos). Los umbrales se ajustan en la tabla `alerta.regla`.
+
+```powershell
+uv run python -m notifications evaluar                # base local (Docker)
+uv run python -m notifications evaluar --sin-correo   # sin enviar correos
+uv run python -m notifications prueba-correo          # verifica la cuenta de Gmail
+```
+
+- **Configuración:** `SMTP_USUARIO`, `SMTP_PASSWORD` (contraseña de aplicación de Google) y
+  `ALERTAS_DESTINO` en el `.env` y como secrets del environment `production`.
+- **Demostración:** *Actions → Alertas - Evento simulado* inserta días de baja venta
+  (**simulados**), los carga y dispara la alerta de caída de ventas con su correo.
+- Detalle en [alertas.md](documentation/arquitectura/alertas.md).
+
 ## Seguridad: roles de mínimo privilegio
 
 | Rol | Base | Puede | No puede |
@@ -340,6 +361,7 @@ cifra cita la consulta que la respalda; las predicciones y las interpretaciones 
 | `faro_etl` | analítica | Leer y escribir datos de staging y auditoría | Crear, alterar o borrar tablas |
 | `faro_api` | analítica | Leer las vistas aprobadas `api.*` y el control de sesión | Ver `dw`, staging o el modelo serializado |
 | `faro_ml` | analítica | Leer la serie `ml.ventas_semanales`, registrar modelos y pronósticos | Ver `dw`, borrar pronósticos o cambiar métricas |
+| `faro_alertas` | analítica | Leer las vistas de entrada y el pronóstico, registrar alertas, envíos y evaluaciones | Ver `dw`, borrar alertas o cambiar su estado |
 
 Los permisos están en [database/security/](database/security/) y los aplica el CD. Las
 contraseñas no están en el repositorio: se asignan (y se rotan) con
@@ -347,7 +369,7 @@ contraseñas no están en el repositorio: se asignan (y se rotan) con
 ```powershell
 uv run python database/scripts/configurar_roles.py --entorno neon
 # y luego se suben a GitHub, sin mostrarlas (la de faro_api va a Vercel):
-foreach ($v in "NEON_ETL_SOURCE_URL","NEON_APP_SOURCE_URL","NEON_ETL_ANALYTICS_URL","NEON_ML_ANALYTICS_URL") {
+foreach ($v in "NEON_ETL_SOURCE_URL","NEON_APP_SOURCE_URL","NEON_ETL_ANALYTICS_URL","NEON_ML_ANALYTICS_URL","NEON_ALERTAS_ANALYTICS_URL") {
   (Select-String .env -Pattern "^$v=(.+)$").Matches[0].Groups[1].Value | gh secret set $v --env production
 }
 ```

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Col, Layout, Row, Tabs, Typography } from "antd";
-import { BarChartOutlined, LineChartOutlined } from "@ant-design/icons";
+import { BarChartOutlined, LineChartOutlined, RobotOutlined } from "@ant-design/icons";
 import { useApi } from "./hooks/useApi";
 import { aParametros, FILTRO_DE_DIMENSION, FILTROS_INICIALES, periodoPorDefecto, type Etiquetas, type EstadoFiltros } from "./filtros";
 import type { Modo } from "./tema";
@@ -10,9 +10,12 @@ import DetalleFactura from "./componentes/DetalleFactura";
 import Encabezado from "./componentes/Encabezado";
 import GraficoDesglose from "./componentes/GraficoDesglose";
 import GraficoTendencia from "./componentes/GraficoTendencia";
+import PanelAsistente from "./componentes/PanelAsistente";
 import PanelPronostico from "./componentes/PanelPronostico";
 import TablaFacturas from "./componentes/TablaFacturas";
 import TarjetasKpi from "./componentes/TarjetasKpi";
+
+type Pestana = "historico" | "pronostico" | "asistente";
 
 interface Props {
   usuario: Usuario;
@@ -28,7 +31,9 @@ export default function Dashboard({ usuario, modo, onCambiarModo, onSalir }: Pro
   const [etiquetas, setEtiquetas] = useState<Etiquetas>({});
   const [inicializado, setInicializado] = useState(false);
   const [facturaAbierta, setFacturaAbierta] = useState<number | null>(null);
-  const [pestana, setPestana] = useState<"historico" | "pronostico">("historico");
+  const [pestana, setPestana] = useState<Pestana>("historico");
+  // El asistente queda montado una vez abierto: la conversación no se pierde al cambiar de pestaña
+  const [asistenteAbierto, setAsistenteAbierto] = useState(false);
 
   const porDefecto = useCallback(
     (): EstadoFiltros =>
@@ -66,7 +71,10 @@ export default function Dashboard({ usuario, modo, onCambiarModo, onSalir }: Pro
       <Layout.Content className="contenido">
         <Tabs
           activeKey={pestana}
-          onChange={(k) => setPestana(k as "historico" | "pronostico")}
+          onChange={(k) => {
+            setPestana(k as Pestana);
+            if (k === "asistente") setAsistenteAbierto(true);
+          }}
           items={[
             {
               key: "historico",
@@ -107,6 +115,12 @@ export default function Dashboard({ usuario, modo, onCambiarModo, onSalir }: Pro
               icon: <LineChartOutlined />,
               // Solo se pide a la API cuando se abre la pestaña
               children: pestana === "pronostico" ? <PanelPronostico /> : null,
+            },
+            {
+              key: "asistente",
+              label: "Asistente (IA)",
+              icon: <RobotOutlined />,
+              children: asistenteAbierto ? <PanelAsistente /> : null,
             },
           ]}
         />

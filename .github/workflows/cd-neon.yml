@@ -1,0 +1,78 @@
+# Despliegue continuo (CD) de Faro hacia Neon (producción).
+#
+# Cuándo corre:
+#   - Al integrar a main un cambio en el esquema de la fuente (o en este workflow).
+#   - Manualmente desde la pestaña Actions ("Run workflow").
+#
+# Qué hace:
+#   1. Aplica database/source/01_esquema_fuente.sql en Neon, en UNA transacción.
+#      El esquema es idempotente: re-aplicarlo no altera los datos existentes.
+#   2. Verifica el despliegue con las pruebas de integración contra Neon.
+#
+# Las credenciales viven como secrets del environment "production" de GitHub,
+# que solo permite desplegar desde la rama main.
+
+name: CD - Neon
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "database/source/01_esquema_fuente.sql"
+      - ".github/workflows/cd-neon.yml"
+  workflow_dispatch:
+
+# Nunca dos despliegues simultáneos sobre la misma base, y nunca se cancela uno en curso
+concurrency:
+  group: cd-neon-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  esquema-fuente:
+    name: Desplegar esquema de la fuente (wwi_oltp)
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      NEON_SOURCE_DATABASE_URL: ${{ secrets.NEON_SOURCE_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verificar que existen las credenciales
+        run: |
+          test -n "$NEON_SOURCE_DATABASE_URL" || { echo "::error::Falta el secret NEON_SOURCE_DATABASE_URL"; exit 1; }
+
+      - name: Aplicar esquema en Neon (una transacción)
+        run: |
+          psql "$NEON_SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -q \
+            -c "SET client_min_messages TO warning" \
+            -f database/source/01_esquema_fuente.sql
+
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Instalar dependencias exactas (uv.lock)
+        run: uv sync --locked
+
+      - name: Verificar el despliegue (pruebas de integración contra Neon)
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.NEON_SOURCE_DATABASE_URL }}
+          ANALYTICS_DATABASE_URL: ${{ secrets.NEON_ANALYTICS_DATABASE_URL }}
+        run: uv run pytest -v -m integracion tests/test_conexion.py tests/test_esquema_fuente.py
+
+      - name: Resumen del despliegue
+        run: |
+          {
+            echo "## Neon · wwi_oltp desplegada"
+            echo ""
+            echo "| Tabla | Filas |"
+            echo "|---|---:|"
+            psql "$NEON_SOURCE_DATABASE_URL" -At -F ' | ' -c "
+              SELECT 'sales.invoice_lines', count(*) FROM sales.invoice_lines UNION ALL
+              SELECT 'sales.invoices', count(*) FROM sales.invoices UNION ALL
+              SELECT 'sales.order_lines', count(*) FROM sales.order_lines UNION ALL
+              SELECT 'sales.orders', count(*) FROM sales.orders UNION ALL
+              SELECT 'sales.customers', count(*) FROM sales.customers UNION ALL
+              SELECT 'warehouse.stock_items', count(*) FROM warehouse.stock_items" \
+              | sed 's/^/| /; s/$/ |/'
+          } >> "$GITHUB_STEP_SUMMARY"

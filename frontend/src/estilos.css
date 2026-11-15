@@ -44,6 +44,15 @@ body {
   gap: 10px;
   align-items: center;
 }
+/* En pantallas angostas las etiquetas de estado pueden partirse en dos líneas */
+.encabezado-estado,
+.encabezado-estado .ant-space-item {
+  max-width: 100%;
+}
+.encabezado-estado .ant-tag {
+  white-space: normal;
+  height: auto;
+}
 
 .contenido {
   width: 100%;
@@ -76,6 +85,7 @@ body {
 /* Columnas numéricas alineadas */
 .num {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .pie {

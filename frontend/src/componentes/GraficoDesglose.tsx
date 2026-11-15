@@ -44,6 +44,7 @@ export function opcionDesglose(filas: FilaDesglose[], p: Paleta): OpcionGrafico 
     },
     xAxis: {
       type: "value",
+      splitNumber: 3, // pocas marcas: las etiquetas "USD 12 M" no se encimen en pantallas angostas
       axisLabel: { color: p.tenue, formatter: (v: number) => fMonedaCompacta(v) },
       splitLine: { lineStyle: { color: p.grilla } },
     },

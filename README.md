@@ -35,7 +35,7 @@ Las decisiones técnicas y su justificación están en
 | 2. Diseño | Arquitectura, staging, grano, dimensiones | ✅ Completa |
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena, zona ready, roles, simulador y ejecución horaria | ✅ Completa |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ✅ Completa |
-| 5. BI | API y dashboard | 🔄 En curso (API y dashboard listos; falta la publicación en Vercel) |
+| 5. BI | API, dashboard y publicación en Vercel | ✅ Completa |
 | 6. ML y GenAI | Modelo predictivo y asistente | — |
 | 7. Automatización | Alertas y monitoreo | — |
 | 8. Integración | Pruebas end-to-end, despliegue, video | — |
@@ -240,6 +240,42 @@ Capturas (las genera la prueba E2E): [inicio de sesión](documentation/capturas/
 [detalle de factura](documentation/capturas/04-detalle-factura.png) ·
 [modo oscuro](documentation/capturas/05-modo-oscuro.png) · [móvil](documentation/capturas/06-movil.png).
 
+## Producción (Vercel)
+
+**https://faro-fawn-kappa.vercel.app** — usuario `demo`; la contraseña es `NEON_FARO_PASSWORD_DEMO`
+del `.env` (el usuario de producción vive en Neon, no en la base local).
+
+Un solo proyecto de Vercel publica, en el mismo dominio, los dos servicios de
+[vercel.json](vercel.json) (decisión D-22):
+
+| Servicio | Raíz | Qué es | Rutas |
+|---|---|---|---|
+| `dashboard` | `frontend/` | Sitio estático de Vite | todo lo demás |
+| `api` | `backend/` | FastAPI como función de Python (`app.main:app`) | `/api/*` |
+
+- **Despliegue:** automático desde GitHub. Cada PR crea un *preview*, protegido con el inicio
+  de sesión de Vercel. Cada integración a `main` publica en producción.
+- **Región `cle1`** (Cleveland): la misma zona de AWS que Neon (us-east-2), así cada consulta
+  recorre pocos kilómetros.
+- **Dependencias de la API:** [backend/requirements.txt](backend/requirements.txt), exportado
+  de `uv.lock`. El CI falla si quedan distintos. Para regenerarlo:
+  `uv export --frozen --format requirements.txt --no-dev --no-hashes --no-emit-project --no-header --no-annotate -o backend/requirements.txt`
+- **Variables** (tipo *sensitive*: Vercel no deja volver a leerlas):
+  - `API_DATABASE_URL`: la conexión del rol `faro_api` por el pooler de Neon;
+  - `JWT_SECRET`: propio de producción.
+
+  Se cargan con la CLI de Vercel sin mostrarlas:
+
+```powershell
+npm i -g vercel; vercel login; vercel link --project faro   # una sola vez
+(Select-String .env -Pattern '^NEON_API_ANALYTICS_URL=(.+)$').Matches[0].Groups[1].Value |
+  vercel env add API_DATABASE_URL --environment production,preview --sensitive --yes
+node -e "process.stdout.write(require('crypto').randomBytes(48).toString('base64url'))" |
+  vercel env add JWT_SECRET --environment production,preview --sensitive --yes --force
+```
+
+Para revisar un *preview* protegido desde la terminal: `vercel curl /api/salud --deployment <url>`.
+
 ## Simulador de ventas (datos SIMULADOS)
 
 WideWorldImporters termina el 31-may-2016. El simulador hace de "sistema de ventas en
@@ -316,7 +352,9 @@ npm run e2e
    esquema de la fuente, lo aplica en Neon en una sola transacción y verifica el despliegue
    con las pruebas de integración contra producción. También se puede lanzar a mano desde
    *Actions → CD - Neon → Run workflow*. Las credenciales son *secrets* del *environment*
-   `production` (solo desde `main`). El despliegue de la aplicación se sumará en la Fase 5.
+   `production` (solo desde `main`).
+6. **CD de la aplicación — Vercel:** cada Pull Request genera un despliegue *preview* y cada
+   integración a `main` publica en producción (ver [Producción](#producción-vercel)).
 
 ## Reiniciar el entorno desde cero
 

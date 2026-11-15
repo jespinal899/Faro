@@ -65,6 +65,31 @@ jobs:
       - name: Ejecutar pruebas
         run: uv run pytest -v
 
+  dashboard:
+    name: Dashboard (lint, pruebas y build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Instalar dependencias exactas (package-lock.json)
+        run: npm ci
+      - name: Lint (ESLint)
+        run: npm run lint
+      - name: Pruebas unitarias (Vitest)
+        run: npm test
+      # Compila TypeScript en modo estricto y genera el sitio estático que se publica
+      - name: Build
+        run: npm run build
+      # La prueba E2E (Playwright) necesita la base con datos completos: se corre en local
+      # con "npm run e2e" y sus capturas quedan en documentation/capturas.
+
   docker-compose:
     name: Validar docker-compose
     runs-on: ubuntu-latest

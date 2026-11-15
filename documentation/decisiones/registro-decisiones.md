@@ -223,13 +223,47 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
 - **Justificación:** respeta la cuota gratuita de Neon (100 CU-horas por proyecto al mes) y
   evita confundir un batch frecuente con tiempo real.
 
+## D-18 · Zona ready como vistas y regla de supervivencia
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - `stg_ready` son **vistas** sobre `stg_clean`: integran y derivan sin duplicar datos
+    (cuida el almacenamiento gratuito de Neon) y nunca quedan desactualizadas.
+  - La prioridad de los grupos de producto vive en una tabla de referencia versionada.
+  - El factor de ponderación del puente no se redondea: redondear 1/3 a 6 decimales
+    descuadraba el total en 41.82.
+  - **Supervivencia:** ante varias versiones de un registro gana la **última extraída**
+    (el estado actual de la fuente), no la de mayor fecha de modificación. Las pruebas
+    mostraron que una versión vieja con fecha futura errónea le ganaba a la corregida.
+
+## D-19 · Roles de mínimo privilegio
+
+- **Estado:** Aceptada (2026-11-15). Cierra el pendiente de D-11.
+- **Decisión:** `etl_lector` (solo lectura en la fuente), `wwi_app` (solo inserta pedidos y
+  facturas) y `faro_etl` (solo datos de staging y auditoría, sin cambiar la estructura).
+  Se crean con SQL y sin privilegios heredados. El dueño de las bases solo se usa en el CD.
+- **Contraseñas:** aleatorias, rotables con un script, guardadas solo en `.env` y en los
+  *secrets* del *environment* `production`.
+- **Evidencia:** pruebas automáticas de lo que cada rol puede y **no** puede hacer.
+
+## D-20 · Simulador de ventas y programación
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - El simulador inserta el siguiente día hábil del reloj de negocio (desde el 1-jun-2016)
+    con los patrones del perfilado, y marca todo con la persona *Simulador de ventas*.
+  - En producción corre una vez al día; el ETL corre cada hora (D-17). Ambos se pueden
+    lanzar a mano para la demo, con opciones de volumen y de registro inválido.
+- **Límite conocido:** los datos simulados son aleatorios alrededor del promedio histórico.
+  Sirven para demostrar la carga incremental y las alertas, no para evaluar el pronóstico.
+
 ---
 
 ## Pendientes
 
 | Tema | Fase |
 |---|---|
-| Roles de mínimo privilegio en Neon (en lugar de `*_owner`) | 3 |
+| Roles `faro_api` y `faro_ia` | 5 y 6 |
 | Backend, frontend y hosting de la aplicación | 5 |
 | Modelo de ML y proveedor de IA generativa | 6 |
 | Canales de notificación | 7 |

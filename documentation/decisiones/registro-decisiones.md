@@ -485,4 +485,4 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
 
 | Tema | Fase |
 |---|---|
-| Disparador fiable para los procesos programados (GitHub retrasa o descarta los cron) | 7 |
+| Disparador fiable para los procesos programados (GitHub retrasa o descarta los cron). Propuesta: cron-job.org + token de alcance mínimo, en [alertas.md, sección 9](../arquitectura/alertas.md) | 7 (documentado, no implementado) |

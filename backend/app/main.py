@@ -17,7 +17,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from .db import lectura
-from .rutas import auth, datos
+from .rutas import auth, datos, pronostico
 
 log = logging.getLogger("faro.api")
 
@@ -73,3 +73,4 @@ def salud() -> dict[str, str]:
 
 app.include_router(auth.router, prefix="/api")
 app.include_router(datos.router, prefix="/api")
+app.include_router(pronostico.router, prefix="/api")

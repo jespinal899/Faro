@@ -31,6 +31,13 @@ class Bases(tuple):
         return "Bases(<oculto>)"
 
 
+class Url(str):
+    """Una cadena de conexión que no se muestra en los reportes de pytest (lleva la contraseña)."""
+
+    def __repr__(self) -> str:
+        return "Url(<oculta>)"
+
+
 @pytest.fixture(scope="module")
 def bases():
     url = os.getenv("ANALYTICS_DATABASE_URL")

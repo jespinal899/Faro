@@ -118,3 +118,41 @@ la auditoría ni los registros rechazados, solo conteos y estados.
 
 Se actualiza cada minuto. Además, cada workflow deja su resumen en GitHub Actions y GitHub avisa por
 correo cuando un workflow falla.
+
+## 9. Pendiente: un disparador programado fiable
+
+**Situación.** El ETL horario, el simulador diario y el pronóstico semanal se programan con
+`schedule` (cron) de GitHub Actions. GitHub no garantiza esos horarios: en repositorios con poca
+actividad los retrasa o los descarta. El 2026-11-15 se ejecutó **uno solo** de los horarios
+del día (el ETL de las 11:07 UTC, con 46 minutos de retraso). Mientras tanto:
+- todo funciona **a mano** (*Actions → … → Run workflow*), que es como se hace la demostración;
+- la pestaña **Operación** del dashboard avisa en amarillo cuando lleva más de 2 horas sin cargas,
+  así el retraso queda a la vista en vez de ocultarse.
+
+**Propuesta (no implementada).** Un servicio de cron externo y gratuito
+([cron-job.org](https://cron-job.org)) que cada hora llame a la API de GitHub para lanzar el
+workflow, igual que el botón *Run workflow*:
+
+```
+POST https://api.github.com/repos/jespinal899/Faro/actions/workflows/etl-ventas.yml/dispatches
+Authorization: Bearer <token>
+Accept: application/vnd.github+json
+{"ref": "main"}
+```
+
+| Paso | Quién | Detalle |
+|---|---|---|
+| 1. Crear un token *fine-grained* | Dueño del repositorio | GitHub → *Settings → Developer settings → Fine-grained tokens*: solo el repositorio `Faro`, solo el permiso **Actions: Read and write**, con vencimiento. No da acceso al código ni a los secrets. |
+| 2. Crear la tarea en cron-job.org | Dueño del repositorio | Cada hora (minuto 7), con la URL, las cabeceras y el cuerpo de arriba; el token se guarda solo en cron-job.org. |
+| 3. Repetir para el simulador y el pronóstico | Dueño del repositorio | `simulador-ventas.yml` una vez al día y `ml-pronostico.yml` los lunes. |
+| 4. Verificar | — | En *Actions* las ejecuciones aparecen como `workflow_dispatch`; la pestaña Operación vuelve a verde. |
+
+- **Por qué esta opción:** no requiere servidores ni cambios de código, y el token tiene un alcance
+  mínimo.
+- **Alternativas descartadas:**
+  - Vercel Cron: en el plan gratuito solo permite una ejecución al día.
+  - Un servidor propio con cron: habría que mantenerlo encendido.
+  - El token personal de `gh`: tiene permisos de más.
+- **Efecto en las alertas:** las ejecuciones lanzadas así llegarían como `manual` (el disparador
+  que registra `audit.etl_execution`). Para distinguirlas habría que agregar una entrada
+  `disparador` al workflow.

@@ -37,8 +37,8 @@ Las decisiones técnicas y su justificación están en
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ✅ Completa |
 | 5. BI | API, dashboard y publicación en Vercel | ✅ Completa |
 | 6. ML y GenAI | Pronóstico de ventas y asistente de IA | ✅ Completa |
-| 7. Automatización | Alertas y monitoreo | 🚧 Casi completa (falta un disparador programado fiable) |
-| 8. Integración | Pruebas end-to-end, despliegue, video | — |
+| 7. Automatización | Alertas y monitoreo | ✅ Completa · pendiente documentado: [disparador programado fiable](documentation/arquitectura/alertas.md#9-pendiente-un-disparador-programado-fiable) |
+| 8. Integración | Pruebas end-to-end, documentación, manuales y demo | 🚧 En curso |
 
 ### Documentación de diseño
 

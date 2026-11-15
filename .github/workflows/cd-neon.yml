@@ -6,7 +6,8 @@
 #
 # Qué hace:
 #   1. Aplica en Neon, cada uno en UNA transacción, el esquema de la fuente (wwi_oltp)
-#      y los esquemas de staging y auditoría (faro_analytics).
+#      y los esquemas de staging y auditoría (faro_analytics), con los permisos de los
+#      roles de mínimo privilegio (database/security). Las contraseñas no pasan por aquí.
 #      El esquema es idempotente: re-aplicarlo no altera los datos existentes.
 #   2. Verifica el despliegue con las pruebas de integración contra Neon.
 #
@@ -19,8 +20,9 @@ on:
   push:
     branches: [main]
     paths:
-      - "database/source/01_esquema_fuente.sql"
+      - "database/source/*.sql"
       - "database/staging/**"
+      - "database/security/**"
       - ".github/workflows/cd-neon.yml"
   workflow_dispatch:
 
@@ -46,11 +48,11 @@ jobs:
         run: |
           test -n "$NEON_SOURCE_DATABASE_URL" || { echo "::error::Falta el secret NEON_SOURCE_DATABASE_URL"; exit 1; }
 
-      - name: Aplicar esquema en Neon (una transacción)
+      - name: Aplicar esquema y permisos de la fuente en Neon (una transacción)
         run: |
           psql "$NEON_SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -q \
             -c "SET client_min_messages TO warning" \
-            -f database/source/01_esquema_fuente.sql
+            $(ls database/source/*.sql | sort | sed 's/^/-f /') \n            -f database/security/roles_fuente.sql
 
       - uses: astral-sh/setup-uv@v10.3.3
       - name: Instalar dependencias exactas (uv.lock)
@@ -92,9 +94,9 @@ jobs:
         run: |
           test -n "$NEON_ANALYTICS_DATABASE_URL" || { echo "::error::Falta el secret NEON_ANALYTICS_DATABASE_URL"; exit 1; }
 
-      - name: Aplicar esquemas de staging en Neon (una transacción)
+      - name: Aplicar esquemas y permisos de staging en Neon (una transacción)
         run: |
-          psql "$NEON_ANALYTICS_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -q             -c "SET client_min_messages TO warning"             $(ls database/staging/*.sql | sort | sed 's/^/-f /')
+          psql "$NEON_ANALYTICS_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -q \n            -c "SET client_min_messages TO warning" \n            $(ls database/staging/*.sql | sort | sed 's/^/-f /') \n            -f database/security/roles_analitica.sql
 
       - name: Resumen del despliegue
         run: |

@@ -50,7 +50,7 @@ Base: [arquitectura](arquitectura.md) · [perfil de datos](../pruebas/perfil-fue
 | **Perfilado** | `perfilar_fuente.py` (Fase 1) y re-validación de reglas en cada lote (sección 4). |
 | **Limpieza** | `trim` y espacios múltiples colapsados en los textos; se eliminan caracteres de control. |
 | **Nulos** | Según su causa, con la tabla de la sección 3.1. **Nunca** se reemplaza una medida numérica por cero. |
-| **Duplicados** | Clave de duplicidad = clave natural (p. ej. `invoice_line_id`). **Regla de supervivencia:** gana la versión con mayor `last_edited_when`; las demás quedan en `stg_raw` como historia. |
+| **Duplicados** | Clave de duplicidad = clave natural (p. ej. `invoice_line_id`). **Regla de supervivencia:** gana la **última versión extraída** (el estado actual de la fuente); las demás quedan en `stg_raw` como historia. |
 | **Estandarización** | Fechas y horas en UTC; una sola moneda (USD); nombres de día y mes en español en la dimensión fecha. |
 | **Tipos de datos** | Conversión explícita conservando la precisión (`numeric(18,2)` para importes, `numeric(18,3)` para tasas). Un valor que no se puede convertir va a cuarentena, no se trunca. |
 | **Integridad referencial** | Una transacción que apunta a algo inexistente (factura sin encabezado, producto desconocido) va a **cuarentena**. En el DW, un hecho sin dimensión recibe el **miembro desconocido** (clave −1). |
@@ -88,7 +88,7 @@ Las reglas del perfilado se convierten en controles del ETL. Cada resultado se g
 | K02 | `tax_amount ≠ quantity × unit_price × tax_rate / 100` | ⛔ Cuarentena | Inconsistencia financiera |
 | O02 | `last_edited_when` en el futuro | ⛔ Cuarentena | Marca de tiempo inválida: rompería el watermark |
 | I02 | Línea sin factura o con producto inexistente | ⛔ Cuarentena | Integridad referencial |
-| U03 | Clave natural repetida en el lote | 🔁 Supervivencia | Gana la versión más reciente |
+| U03 | Varias versiones de la misma clave | 🔁 Supervivencia | Gana la última versión extraída |
 | K03 | Factura con fecha anterior a la de su pedido | ⚠️ Marcar | Posible error de captura, pero la venta existe |
 | V04 | Utilidad negativa (venta bajo costo) | ⚠️ Marcar + alerta de negocio | Problema de precios, no de datos (H07) |
 | A01 / A02 | Cantidad o importe atípico | ⚠️ Marcar (`es_atipico`) | Pedido mayorista plausible (H09) |

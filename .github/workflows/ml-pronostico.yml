@@ -47,3 +47,14 @@ jobs:
 
       - name: Pronosticar las 4 semanas siguientes
         run: uv run python -m machine_learning predecir
+
+      # Fase 7: la regla "pronóstico bajo umbral" usa el pronóstico recién generado
+      - name: Evaluar alertas y notificar
+        env:
+          ALERTAS_DATABASE_URL: ${{ secrets.NEON_ALERTAS_ANALYTICS_URL }}
+          SMTP_USUARIO: ${{ secrets.SMTP_USUARIO }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERTAS_DESTINO: ${{ secrets.ALERTAS_DESTINO }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          DISPARADOR: ${{ github.event_name == 'schedule' && 'cron' || 'manual' }}
+        run: uv run python -m notifications evaluar --disparador "$DISPARADOR"

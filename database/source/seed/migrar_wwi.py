@@ -33,7 +33,7 @@ from psycopg import sql
 
 RAIZ = Path(__file__).resolve().parents[3]
 ESQUEMA_SQL = RAIZ / "database" / "source" / "01_esquema_fuente.sql"
-REPORTE = RAIZ / "documentation" / "pruebas" / "reconciliacion-carga-fuente.md"
+PRUEBAS = RAIZ / "documentation" / "pruebas"
 
 log = logging.getLogger("migrar_wwi")
 
@@ -46,6 +46,12 @@ def _ident(nombre: str) -> sql.Identifier:
 def _entorno(url: str) -> str:
     host = urlparse(url).hostname or ""
     return "Neon (producción)" if "neon.tech" in host else f"local ({host})"
+
+
+def ruta_reporte(url: str) -> Path:
+    """Un reporte por entorno, para que la evidencia de uno no borre la del otro."""
+    sufijo = "neon" if "neon.tech" in (urlparse(url).hostname or "") else "local"
+    return PRUEBAS / f"reconciliacion-carga-fuente-{sufijo}.md"
 
 
 def conectar_sqlserver() -> pymssql.Connection:
@@ -131,7 +137,9 @@ def reconciliar(pg: psycopg.Connection, ms: pymssql.Connection) -> tuple[list, l
     return conteos, controles
 
 
-def escribir_reporte(entorno: str, duracion: float, conteos: list, controles: list) -> None:
+def escribir_reporte(
+    ruta: Path, entorno: str, duracion: float, conteos: list, controles: list
+) -> None:
     ok = all(c[-1] for c in conteos) and all(c[-1] for c in controles)
     lineas = [
         "# Reconciliación de la carga de la fuente (WWI → wwi_oltp)",
@@ -160,8 +168,8 @@ def escribir_reporte(entorno: str, duracion: float, conteos: list, controles: li
         *(f"| {n} | {a:,} | {b:,} | {'✅' if m else '❌'} |" for n, a, b, m in controles),
         "",
     ]
-    REPORTE.parent.mkdir(parents=True, exist_ok=True)
-    REPORTE.write_text("\n".join(lineas), encoding="utf-8", newline="\n")
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    ruta.write_text("\n".join(lineas), encoding="utf-8", newline="\n")
 
 
 def main() -> int:
@@ -189,17 +197,18 @@ def main() -> int:
         return 1
 
     duracion = time.perf_counter() - inicio
-    escribir_reporte(entorno, duracion, conteos, controles)
+    reporte = ruta_reporte(url)
+    escribir_reporte(reporte, entorno, duracion, conteos, controles)
     diferencias = [c for c in conteos if not c[-1]] + [c for c in controles if not c[-1]]
     total = sum(c[3] for c in conteos)
     if diferencias:
-        log.error("Reconciliación con %d diferencia(s). Ver %s", len(diferencias), REPORTE.name)
+        log.error("Reconciliación con %d diferencia(s). Ver %s", len(diferencias), reporte.name)
         return 1
     log.info(
         "OK: %s filas migradas y reconciliadas en %.1f s. Reporte: %s",
         f"{total:,}",
         duracion,
-        REPORTE.relative_to(RAIZ),
+        reporte.relative_to(RAIZ),
     )
     return 0
 

@@ -7,7 +7,7 @@ Evidencia de respaldo:
 [diccionario de datos](../modelos/diccionario-fuente.md) ·
 [diagrama entidad-relación](../modelos/erd-fuente.md) ·
 [perfil de datos](../pruebas/perfil-fuente.md) ·
-[reconciliación de la carga](../pruebas/reconciliacion-carga-fuente.md)
+[reconciliación de la carga](../pruebas/reconciliacion-carga-fuente-local.md)
 
 ---
 

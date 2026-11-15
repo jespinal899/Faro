@@ -3,12 +3,17 @@
 # Ejecuta: fuente (wwi_oltp) -> stg_raw -> stg_clean / cuarentena, con auditoría.
 # El runner arranca, carga y se apaga: no hay servidor encendido (ver decisión D-13).
 #
-# Por ahora se lanza a mano (Actions -> ETL - Ventas -> Run workflow).
-# La programación horaria se activa junto con el simulador de ventas.
+# Corre cada hora (latencia acordada: <= 1 hora, decisión D-17) y también a mano:
+# Actions -> ETL - Ventas -> Run workflow.
+#
+# Usa roles de mínimo privilegio: etl_lector (solo lee la fuente) y faro_etl (solo datos
+# de staging y auditoría). No usa las credenciales del dueño de las bases.
 
 name: ETL - Ventas
 
 on:
+  schedule:
+    - cron: "7 * * * *" # minuto 7 de cada hora (UTC); GitHub puede retrasarlo unos minutos
   workflow_dispatch:
     inputs:
       modo:
@@ -27,14 +32,16 @@ permissions:
 
 jobs:
   staging:
-    name: Staging de ventas (${{ inputs.modo }})
+    name: Staging de ventas (${{ inputs.modo || 'incremental' }})
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 30
     env:
-      SOURCE_DATABASE_URL: ${{ secrets.NEON_SOURCE_DATABASE_URL }}
-      ANALYTICS_DATABASE_URL: ${{ secrets.NEON_ANALYTICS_DATABASE_URL }}
-      MODO: ${{ inputs.modo }}
+      SOURCE_DATABASE_URL: ${{ secrets.NEON_ETL_SOURCE_URL }}
+      ANALYTICS_DATABASE_URL: ${{ secrets.NEON_ETL_ANALYTICS_URL }}
+      # En las ejecuciones programadas no hay entradas: incremental y disparador cron
+      MODO: ${{ inputs.modo || 'incremental' }}
+      DISPARADOR: ${{ github.event_name == 'schedule' && 'cron' || 'manual' }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3
@@ -42,7 +49,7 @@ jobs:
         run: uv sync --locked
 
       - name: Ejecutar pipeline
-        run: uv run python -m etl.orchestration.pipeline --modo "$MODO" --disparador manual
+        run: uv run python -m etl.orchestration.pipeline --modo "$MODO" --disparador "$DISPARADOR"
 
       - name: Resumen de la ejecución (desde la auditoría)
         if: always()

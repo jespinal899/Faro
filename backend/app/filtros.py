@@ -19,7 +19,8 @@ TEXTO = Field(default=None, max_length=100)
 class Filtros(BaseModel):
     """Filtros comunes a todos los indicadores. Todos son opcionales."""
 
-    model_config = {"extra": "forbid"}
+    # Sin extra='forbid': FastAPI le pasa TODOS los parámetros de la URL (también los propios
+    # de cada endpoint, como top o tamano). Los parámetros desconocidos se ignoran.
 
     desde: date | None = None
     hasta: date | None = None

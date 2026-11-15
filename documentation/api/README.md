@@ -32,12 +32,20 @@ aprobadas del esquema `api`.
 | GET | `/api/facturas/{id}` | Navegación a una factura y sus líneas | ✔ |
 | GET | `/api/opciones` | Valores para los filtros | ✔ |
 | GET | `/api/estado` | Fecha de la última carga exitosa y rango de datos | ✔ |
+| GET | `/api/pronostico?semanas_historia=26` | **PREDICCIÓN** de las 4 semanas siguientes por grupo, con rango del 80 %, contexto real, seguimiento de pronósticos pasados y calidad del modelo | ✔ |
+| GET | `/api/pronostico/evaluacion?grupo=…&horizonte=1..4` | Lo que pronosticaron el modelo y la línea base en las semanas de prueba, frente a lo vendido | ✔ |
 
 **Filtros comunes** (parámetros de consulta, todos opcionales):
 - `desde`, `hasta`;
 - `territorio`, `estado`, `categoria`, `grupo`;
 - `vendedor_id`, `cliente_id`, `producto_id`;
 - `solo_bajo_costo`, `incluir_simulados`.
+
+Los filtros **no aplican al pronóstico**: el modelo pronostica cada grupo completo. La API del
+pronóstico no calcula nada: expone lo que registró el proceso del modelo (versión, origen,
+horizonte y métricas), leído de las vistas aprobadas `api.modelo_pronostico`, `api.pronostico`,
+`api.pronostico_vs_real`, `api.prediccion_prueba` y `api.ventas_semanales`. Si no hay un
+modelo vigente responde `disponible: false`, en lugar de inventar un pronóstico.
 
 ## Errores
 

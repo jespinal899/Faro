@@ -52,7 +52,8 @@ jobs:
         run: |
           psql "$NEON_SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -q \
             -c "SET client_min_messages TO warning" \
-            $(ls database/source/*.sql | sort | sed 's/^/-f /') \n            -f database/security/roles_fuente.sql
+            $(ls database/source/*.sql | sort | sed 's/^/-f /') \
+            -f database/security/roles_fuente.sql
 
       - uses: astral-sh/setup-uv@v10.3.3
       - name: Instalar dependencias exactas (uv.lock)
@@ -96,7 +97,10 @@ jobs:
 
       - name: Aplicar esquemas y permisos de staging en Neon (una transacción)
         run: |
-          psql "$NEON_ANALYTICS_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -q \n            -c "SET client_min_messages TO warning" \n            $(ls database/staging/*.sql | sort | sed 's/^/-f /') \n            -f database/security/roles_analitica.sql
+          psql "$NEON_ANALYTICS_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -q \
+            -c "SET client_min_messages TO warning" \
+            $(ls database/staging/*.sql | sort | sed 's/^/-f /') \
+            -f database/security/roles_analitica.sql
 
       - name: Resumen del despliegue
         run: |

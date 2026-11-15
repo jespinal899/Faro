@@ -55,6 +55,17 @@ jobs:
       - name: Validar el Data Warehouse (reconciliación y modelo)
         run: uv run python database/scripts/validar_dw.py
 
+      # Fase 7: con los datos ya cargados y validados, evaluar las alertas y notificar (rol
+      # faro_alertas). Repetir la evaluación no duplica alertas ni correos.
+      - name: Evaluar alertas y notificar
+        env:
+          ALERTAS_DATABASE_URL: ${{ secrets.NEON_ALERTAS_ANALYTICS_URL }}
+          SMTP_USUARIO: ${{ secrets.SMTP_USUARIO }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERTAS_DESTINO: ${{ secrets.ALERTAS_DESTINO }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: uv run python -m notifications evaluar --disparador "$DISPARADOR"
+
       - name: Resultado de la validación
         if: always()
         run: |

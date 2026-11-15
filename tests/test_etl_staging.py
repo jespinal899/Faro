@@ -35,7 +35,7 @@ def test_carga_inicial_copia_todo_y_reconcilia(bases):
         en_fuente = uno(fuente, f"SELECT count(*) FROM {t.origen}")
         assert uno(analitica, f"SELECT count(*) FROM stg_raw.{t.staging}") == en_fuente
         assert uno(analitica, f"SELECT count(*) FROM stg_clean.{t.staging}") == en_fuente
-    assert r.leidas == r.insertadas == 18
+    assert r.leidas == r.insertadas == 19
 
 
 def test_auditoria_registra_ejecucion_pasos_y_watermarks(bases):
@@ -44,7 +44,7 @@ def test_auditoria_registra_ejecucion_pasos_y_watermarks(bases):
         analitica,
         "SELECT status, rows_read, reconciled FROM audit.etl_execution ORDER BY 1 DESC LIMIT 1",
     )[0]
-    assert (estado, leidas, reconciliada) == ("exitoso", 18, True)
+    assert (estado, leidas, reconciliada) == ("exitoso", 19, True)
     pasos = dict(sql(analitica, "SELECT step, count(*) FROM audit.etl_step GROUP BY 1"))
     assert pasos == {"extract": 17, "clean": 17, "reconcile": 17}
     assert uno(analitica, "SELECT count(*) FROM audit.watermark") == 17

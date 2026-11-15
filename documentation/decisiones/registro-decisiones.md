@@ -298,6 +298,17 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
 - **Consecuencias:** Vercel no admite WebSockets en funciones: las alertas de la Fase 7 se
   consultarán periódicamente (*polling*), lo que la guía permite. Las consultas deben
   responder en pocos segundos: medidas en < 1 s con los datos completos.
+- **Implementación (2026-11-15):**
+  - Se usó **Vercel Services**, la forma que hoy documenta Vercel para un backend en Python
+    junto a un frontend, en lugar del antiguo `api/index.py`. `vercel.json` declara dos
+    servicios: `dashboard` (`frontend/`) y `api` (`backend/`). La API recibe la ruta original
+    (`/api/kpis`), así que el código no cambia entre local y producción.
+  - Funciones en la región **`cle1`** (Cleveland), la misma zona de AWS que Neon (us-east-2).
+    El chequeo de salud con consulta a la base responde en ~0.35 s desde la PC de desarrollo.
+  - Las dependencias de la API salen de `uv.lock` (`backend/requirements.txt`, verificado en el
+    CI) y Node queda fijo en 24, igual que en local y en el CI.
+  - Los *preview* de cada PR quedan protegidos con el inicio de sesión de Vercel; solo el
+    dominio de producción es público.
 
 ## D-23 · Dashboard web: tecnología y reglas de visualización
 

@@ -33,8 +33,8 @@ Las decisiones técnicas y su justificación están en
 | 0. Entorno | Python, Docker, PostgreSQL local, repositorio, CI | ✅ Completa |
 | 1. Descubrimiento | Cargar la fuente (local y Neon), ERD, diccionario, perfilado, preguntas analíticas, CD | ✅ Completa |
 | 2. Diseño | Arquitectura, staging, grano, dimensiones | ✅ Completa |
-| 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena | 🔄 En curso (staging listo; faltan zona ready, roles y simulador) |
-| 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | — |
+| 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena, zona ready, roles, simulador y ejecución horaria | ✅ Completa |
+| 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ⏳ Siguiente |
 | 5. BI | API y dashboard | — |
 | 6. ML y GenAI | Modelo predictivo y asistente | — |
 | 7. Automatización | Alertas y monitoreo | — |
@@ -148,7 +148,9 @@ uv run python -m etl.orchestration.pipeline --modo inicial  # vacía staging y r
 - Repetir una ejecución **no duplica** datos.
 - Las reglas de calidad están en [etl/config.py](etl/config.py); los rechazados van a
   `stg_quarantine.registro_rechazado` con la regla que falló.
-- En producción se lanza desde *Actions → ETL - Ventas → Run workflow*.
+- La zona `stg_ready` deja las entidades integradas para el DW (ventas por línea de factura,
+  clientes, productos con su grupo principal, geografía y empleados).
+- En producción corre **cada hora** y también desde *Actions → ETL - Ventas → Run workflow*.
 - Evidencia de pruebas: [pruebas-etl-staging.md](documentation/pruebas/pruebas-etl-staging.md).
 
 ```sql
@@ -156,6 +158,45 @@ uv run python -m etl.orchestration.pipeline --modo inicial  # vacía staging y r
 SELECT execution_id, mode, status, rows_read, rows_inserted, rows_updated, rows_rejected, reconciled
 FROM audit.etl_execution ORDER BY execution_id DESC LIMIT 5;
 ```
+
+## Simulador de ventas (datos SIMULADOS)
+
+WideWorldImporters termina el 31-may-2016. El simulador hace de "sistema de ventas en
+operación": inserta los pedidos y facturas de los siguientes días hábiles, imitando los
+patrones reales. Todo lo que crea queda marcado con la persona *Simulador de ventas* y se ve
+en staging como `es_simulado = true`.
+
+```powershell
+uv run python -m simulador.ventas                       # el siguiente día hábil
+uv run python -m simulador.ventas --dias 5              # los siguientes 5 días hábiles
+uv run python -m simulador.ventas --factor-volumen 0.5  # un día con la mitad de ventas
+uv run python -m simulador.ventas --registro-invalido   # agrega una línea inválida (cuarentena)
+uv run python -m etl.orchestration.pipeline             # el ETL carga lo nuevo
+```
+
+En producción: *Actions → Simulador - Ventas* (una vez al día y a mano) y
+*Actions → ETL - Ventas* (cada hora y a mano).
+
+## Seguridad: roles de mínimo privilegio
+
+| Rol | Base | Puede | No puede |
+|---|---|---|---|
+| `etl_lector` | fuente | Leer | Modificar nada |
+| `wwi_app` | fuente | Leer e insertar pedidos y facturas | Modificar o borrar |
+| `faro_etl` | analítica | Leer y escribir datos de staging y auditoría | Crear, alterar o borrar tablas |
+
+Los permisos están en [database/security/](database/security/) y los aplica el CD. Las
+contraseñas no están en el repositorio: se asignan (y se rotan) con
+
+```powershell
+uv run python database/scripts/configurar_roles.py --entorno neon
+# y luego se suben a GitHub, sin mostrarlas:
+foreach ($v in "NEON_ETL_SOURCE_URL","NEON_APP_SOURCE_URL","NEON_ETL_ANALYTICS_URL") {
+  (Select-String .env -Pattern "^$v=(.+)$").Matches[0].Groups[1].Value | gh secret set $v --env production
+}
+```
+
+El dueño de las bases solo se usa para desplegar la estructura (workflow *CD - Neon*).
 
 ## Calidad y pruebas (lo mismo que ejecuta el CI)
 
@@ -205,6 +246,7 @@ docker compose up -d       # vuelve a crear las bases vacías
 ├── documentation/      decisiones, arquitectura, modelos, manuales, pruebas
 ├── database/           scripts SQL de fuente, staging y data warehouse
 ├── etl/                extracción, transformación, carga y orquestación
+├── simulador/          simulador de ventas (operación continua para la demo)
 ├── backend/            API
 ├── frontend/           dashboard web
 ├── machine-learning/   notebooks, entrenamiento, evaluación, modelos

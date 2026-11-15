@@ -30,8 +30,8 @@ data/raw/
 # Artefactos de MLflow / modelos entrenados (se regeneran con el pipeline)
 mlruns/
 mlartifacts/
-machine-learning/models/*
-!machine-learning/models/.gitkeep
+machine_learning/models/*
+!machine_learning/models/.gitkeep
 
 # ===== Herramientas de agentes / Neon =====
 # Vínculo local con el proyecto de Neon (IDs de org/proyecto/rama de cada desarrollador)

@@ -9,7 +9,7 @@ const tarjeta = (page: Page, titulo: string) =>
   page.locator(".ant-card").filter({ has: page.locator(".ant-card-head-title", { hasText: new RegExp(`^${titulo}$`) }) });
 
 async function esperarGraficos(page: Page) {
-  await expect(page.locator("canvas").first()).toBeVisible();
+  await expect(page.locator("canvas:visible").first()).toBeVisible();
   await page.waitForTimeout(1000); // fin de la animación de los gráficos
 }
 
@@ -25,7 +25,7 @@ async function esperarAnimaciones(page: Page) {
   );
 }
 
-test("flujo completo: sesión, KPI, filtros, drill-down, detalle, modo oscuro y móvil", async ({ page }) => {
+test("flujo completo: sesión, KPI, filtros, drill-down, detalle, modo oscuro, móvil y pronóstico", async ({ page }) => {
   test.skip(!PASSWORD, "Falta FARO_PASSWORD_DEMO en .env");
 
   // 1. Inicio de sesión
@@ -87,7 +87,17 @@ test("flujo completo: sesión, KPI, filtros, drill-down, detalle, modo oscuro y 
   await page.screenshot({ path: `${CAPTURAS}/06-movil.png`, fullPage: true });
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  // 8. Cerrar sesión
+  // 8. Pronóstico (Machine Learning): identificado como predicción, con su calidad y el detalle por grupo
+  await page.getByRole("tab", { name: /Pronóstico/ }).click();
+  await expect(page.getByText("Esto es una PREDICCIÓN, no un dato histórico")).toBeVisible();
+  await expect(page.getByTestId("wape-prueba")).toHaveText(/^\d+\.\d %$/);
+  await expect(page.getByText(/Sin pronóstico: historia insuficiente/)).toBeVisible(); // Novelty Items
+  await tarjeta(page, "Próximas 4 semanas, todos los grupos").getByText("Mugs", { exact: true }).click(); // clic = ver ese grupo
+  await expect(tarjeta(page, "Pronóstico semanal por grupo").getByLabel("Grupo de producto").locator("xpath=ancestor::div[contains(@class,'ant-select')][1]")).toContainText("Mugs");
+  await esperarGraficos(page);
+  await page.screenshot({ path: `${CAPTURAS}/07-pronostico.png`, fullPage: true });
+
+  // 9. Cerrar sesión
   await page.getByRole("button", { name: /Usuario Demo/ }).hover();
   await page.getByText("Cerrar sesión").click();
   await expect(page.getByRole("button", { name: /ingresar/i })).toBeVisible();

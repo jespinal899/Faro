@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "description": "Dashboard web de Faro: análisis histórico y descriptivo de ventas desde el Data Warehouse",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",

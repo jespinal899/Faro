@@ -31,6 +31,13 @@ jobs:
         run: uv run ruff check .
       - name: Formato
         run: uv run ruff format --check .
+      # Vercel instala la API desde backend/requirements.txt: debe ser idéntico a uv.lock.
+      # Si falla, regenerarlo con el comando de abajo (sin -o /tmp/...) y subirlo.
+      - name: Dependencias de la API para Vercel al día con uv.lock
+        run: |
+          uv export --frozen --format requirements.txt --no-dev --no-hashes --no-emit-project \
+            --no-header --no-annotate -o /tmp/requirements.txt
+          diff -u backend/requirements.txt /tmp/requirements.txt
 
   pruebas:
     name: Pruebas (pytest + PostgreSQL 17)

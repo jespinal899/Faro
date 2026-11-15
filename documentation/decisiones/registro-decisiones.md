@@ -277,6 +277,28 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
 - **Evidencia:** 11 controles de validación (`validar_dw.py`) que corren después de cada carga en
   producción, más 10 pruebas automáticas del DW.
 
+## D-22 · API del dashboard y publicación en Vercel
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - **Vercel** (plan Hobby, gratuito) publica en un solo proyecto y un solo dominio el dashboard
+    (React, estático) y la API (FastAPI como función de Python bajo `/api`). Al compartir el
+    dominio no hay CORS y la sesión viaja en una cookie httpOnly.
+  - La API lee **solo vistas aprobadas** (`api.*`) con el rol `faro_api`, por el **pooler** de
+    Neon (muchas conexiones cortas). Usa transacciones de solo lectura y corta cada consulta a
+    los 8 s.
+  - **Autenticación propia:** usuarios en `app.usuario` con hash Argon2id, sesión JWT de
+    8 horas y bloqueo tras 5 intentos fallidos (el estado vive en la base, porque las funciones
+    no comparten memoria).
+  - KPI con comparación contra el **mismo período del año anterior**. En semanas y días se
+    corre 364 días para comparar el mismo día de la semana, porque los domingos no hay ventas.
+- **Alternativas consideradas:** Render (gratis, pero el servicio se duerme a los 15 minutos y
+  tarda ~1 minuto en despertar, malo para una demo); dos proyectos separados para frontend y
+  API (obliga a CORS y a cookies entre dominios).
+- **Consecuencias:** Vercel no admite WebSockets en funciones: las alertas de la Fase 7 se
+  consultarán periódicamente (*polling*), lo que la guía permite. Las consultas deben
+  responder en pocos segundos: medidas en < 1 s con los datos completos.
+
 ---
 
 ## Pendientes
@@ -284,6 +306,5 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
 | Tema | Fase |
 |---|---|
 | Roles `faro_api` y `faro_ia` | 5 y 6 |
-| Backend, frontend y hosting de la aplicación | 5 |
 | Modelo de ML y proveedor de IA generativa | 6 |
 | Canales de notificación | 7 |

@@ -371,7 +371,7 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
   - Se documenta como resultado, no se esconde: la serie es sobre todo "nivel + ruido". Ver
     [modelo-ml.md](../modelos/modelo-ml.md).
 
-## D-25 · Asistente de IA generativa: Claude Haiku 5.5 con herramientas controladas
+## D-25 · Asistente de IA generativa con herramientas controladas (Groq gpt-oss-120b; al inicio, Claude Haiku 5.5)
 
 - **Estado:** Aceptada (2026-11-15)
 - **Decisión:**

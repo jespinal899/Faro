@@ -1140,10 +1140,212 @@
           }
         }
       }
+    },
+    "/api/pronostico": {
+      "get": {
+        "tags": [
+          "Pronóstico (Machine Learning)"
+        ],
+        "summary": "Pronóstico vigente por grupo",
+        "description": "Pronóstico de las 4 semanas siguientes por grupo de producto, con su rango probable del\n80 %, las últimas semanas reales como contexto, el seguimiento de pronósticos pasados y la\ncalidad del modelo medida en semanas que no vio. Los filtros del análisis histórico no aplican.",
+        "operationId": "pronostico_api_pronostico_get",
+        "parameters": [
+          {
+            "name": "semanas_historia",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 156,
+              "minimum": 4,
+              "default": 26,
+              "title": "Semanas Historia"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaPronostico"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/pronostico/evaluacion": {
+      "get": {
+        "tags": [
+          "Pronóstico (Machine Learning)"
+        ],
+        "summary": "Evaluación en semanas de prueba",
+        "description": "Lo que el modelo vigente y la línea base pronosticaron para las semanas de prueba\n(que el modelo no vio al entrenarse), frente a lo que realmente se vendió.",
+        "operationId": "evaluacion_api_pronostico_evaluacion_get",
+        "parameters": [
+          {
+            "name": "grupo",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80,
+              "title": "Grupo"
+            }
+          },
+          {
+            "name": "horizonte",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 4,
+              "minimum": 1,
+              "default": 1,
+              "title": "Horizonte"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PuntoPrueba"
+                  },
+                  "title": "Response Evaluacion Api Pronostico Evaluacion Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "Calidad": {
+        "properties": {
+          "metrica": {
+            "type": "string",
+            "const": "wape",
+            "title": "Metrica",
+            "default": "wape"
+          },
+          "linea_base": {
+            "type": "string",
+            "title": "Linea Base"
+          },
+          "linea_base_descripcion": {
+            "type": "string",
+            "title": "Linea Base Descripcion"
+          },
+          "wape_validacion_modelo": {
+            "type": "number",
+            "title": "Wape Validacion Modelo"
+          },
+          "wape_validacion_linea_base": {
+            "type": "number",
+            "title": "Wape Validacion Linea Base"
+          },
+          "wape_prueba_modelo": {
+            "type": "number",
+            "title": "Wape Prueba Modelo"
+          },
+          "wape_prueba_linea_base": {
+            "type": "number",
+            "title": "Wape Prueba Linea Base"
+          },
+          "mejora_prueba_pct": {
+            "type": "number",
+            "title": "Mejora Prueba Pct"
+          },
+          "cobertura_objetivo_pct": {
+            "type": "number",
+            "title": "Cobertura Objetivo Pct"
+          },
+          "cobertura_prueba_pct": {
+            "type": "number",
+            "title": "Cobertura Prueba Pct"
+          },
+          "por_horizonte": {
+            "items": {
+              "$ref": "#/components/schemas/CalidadHorizonte"
+            },
+            "type": "array",
+            "title": "Por Horizonte"
+          }
+        },
+        "type": "object",
+        "required": [
+          "linea_base",
+          "linea_base_descripcion",
+          "wape_validacion_modelo",
+          "wape_validacion_linea_base",
+          "wape_prueba_modelo",
+          "wape_prueba_linea_base",
+          "mejora_prueba_pct",
+          "cobertura_objetivo_pct",
+          "cobertura_prueba_pct",
+          "por_horizonte"
+        ],
+        "title": "Calidad"
+      },
+      "CalidadHorizonte": {
+        "properties": {
+          "horizonte": {
+            "type": "integer",
+            "title": "Horizonte"
+          },
+          "wape_modelo": {
+            "type": "number",
+            "title": "Wape Modelo"
+          },
+          "wape_linea_base": {
+            "type": "number",
+            "title": "Wape Linea Base"
+          },
+          "cobertura_pct": {
+            "type": "number",
+            "title": "Cobertura Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "horizonte",
+          "wape_modelo",
+          "wape_linea_base",
+          "cobertura_pct"
+        ],
+        "title": "CalidadHorizonte"
+      },
       "Comparacion": {
         "properties": {
           "tipo": {
@@ -1292,6 +1494,24 @@
           "lineas_simuladas"
         ],
         "title": "EstadoDatos"
+      },
+      "Excluido": {
+        "properties": {
+          "grupo": {
+            "type": "string",
+            "title": "Grupo"
+          },
+          "motivo": {
+            "type": "string",
+            "title": "Motivo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "grupo",
+          "motivo"
+        ],
+        "title": "Excluido"
       },
       "Factura": {
         "properties": {
@@ -1797,6 +2017,64 @@
         ],
         "title": "LineaFactura"
       },
+      "Modelo": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "algoritmo": {
+            "type": "string",
+            "title": "Algoritmo"
+          },
+          "entrenado_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Entrenado En"
+          },
+          "datos_desde": {
+            "type": "string",
+            "format": "date",
+            "title": "Datos Desde"
+          },
+          "datos_hasta": {
+            "type": "string",
+            "format": "date",
+            "title": "Datos Hasta"
+          },
+          "prueba_desde": {
+            "type": "string",
+            "format": "date",
+            "title": "Prueba Desde"
+          },
+          "commit_codigo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Codigo"
+          },
+          "calidad": {
+            "$ref": "#/components/schemas/Calidad"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "algoritmo",
+          "entrenado_en",
+          "datos_desde",
+          "datos_hasta",
+          "prueba_desde",
+          "commit_codigo",
+          "calidad"
+        ],
+        "title": "Modelo"
+      },
       "Opcion": {
         "properties": {
           "id": {
@@ -1920,6 +2198,160 @@
         ],
         "title": "PaginaFacturas"
       },
+      "PuntoHistoria": {
+        "properties": {
+          "semana": {
+            "type": "string",
+            "format": "date",
+            "title": "Semana"
+          },
+          "venta_neta": {
+            "type": "number",
+            "title": "Venta Neta"
+          },
+          "incluye_simulados": {
+            "type": "boolean",
+            "title": "Incluye Simulados"
+          }
+        },
+        "type": "object",
+        "required": [
+          "semana",
+          "venta_neta",
+          "incluye_simulados"
+        ],
+        "title": "PuntoHistoria"
+      },
+      "PuntoPronostico": {
+        "properties": {
+          "semana": {
+            "type": "string",
+            "format": "date",
+            "title": "Semana"
+          },
+          "horizonte": {
+            "type": "integer",
+            "title": "Horizonte"
+          },
+          "venta_neta": {
+            "type": "number",
+            "title": "Venta Neta"
+          },
+          "inferior": {
+            "type": "number",
+            "title": "Inferior"
+          },
+          "superior": {
+            "type": "number",
+            "title": "Superior"
+          }
+        },
+        "type": "object",
+        "required": [
+          "semana",
+          "horizonte",
+          "venta_neta",
+          "inferior",
+          "superior"
+        ],
+        "title": "PuntoPronostico"
+      },
+      "PuntoPrueba": {
+        "properties": {
+          "semana": {
+            "type": "string",
+            "format": "date",
+            "title": "Semana"
+          },
+          "origen": {
+            "type": "string",
+            "format": "date",
+            "title": "Origen"
+          },
+          "real": {
+            "type": "number",
+            "title": "Real"
+          },
+          "pronostico": {
+            "type": "number",
+            "title": "Pronostico"
+          },
+          "inferior": {
+            "type": "number",
+            "title": "Inferior"
+          },
+          "superior": {
+            "type": "number",
+            "title": "Superior"
+          },
+          "linea_base": {
+            "type": "number",
+            "title": "Linea Base"
+          }
+        },
+        "type": "object",
+        "required": [
+          "semana",
+          "origen",
+          "real",
+          "pronostico",
+          "inferior",
+          "superior",
+          "linea_base"
+        ],
+        "title": "PuntoPrueba"
+      },
+      "PuntoSeguimiento": {
+        "properties": {
+          "origen": {
+            "type": "string",
+            "format": "date",
+            "title": "Origen"
+          },
+          "semana": {
+            "type": "string",
+            "format": "date",
+            "title": "Semana"
+          },
+          "horizonte": {
+            "type": "integer",
+            "title": "Horizonte"
+          },
+          "pronostico": {
+            "type": "number",
+            "title": "Pronostico"
+          },
+          "inferior": {
+            "type": "number",
+            "title": "Inferior"
+          },
+          "superior": {
+            "type": "number",
+            "title": "Superior"
+          },
+          "real": {
+            "type": "number",
+            "title": "Real"
+          },
+          "real_incluye_simulados": {
+            "type": "boolean",
+            "title": "Real Incluye Simulados"
+          }
+        },
+        "type": "object",
+        "required": [
+          "origen",
+          "semana",
+          "horizonte",
+          "pronostico",
+          "inferior",
+          "superior",
+          "real",
+          "real_incluye_simulados"
+        ],
+        "title": "PuntoSeguimiento",
+        "description": "Un pronóstico ya vencido frente a lo que realmente se vendió esa semana."
+      },
       "PuntoTendencia": {
         "properties": {
           "periodo": {
@@ -2018,6 +2450,138 @@
           "comparacion"
         ],
         "title": "RespuestaKpis"
+      },
+      "RespuestaPronostico": {
+        "properties": {
+          "disponible": {
+            "type": "boolean",
+            "title": "Disponible"
+          },
+          "modelo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Modelo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "origen": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origen"
+          },
+          "generado_en": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generado En"
+          },
+          "usa_datos_simulados": {
+            "type": "boolean",
+            "title": "Usa Datos Simulados"
+          },
+          "grupos": {
+            "items": {
+              "$ref": "#/components/schemas/SerieGrupo"
+            },
+            "type": "array",
+            "title": "Grupos"
+          },
+          "excluidos": {
+            "items": {
+              "$ref": "#/components/schemas/Excluido"
+            },
+            "type": "array",
+            "title": "Excluidos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "disponible",
+          "modelo",
+          "origen",
+          "generado_en",
+          "usa_datos_simulados",
+          "grupos",
+          "excluidos"
+        ],
+        "title": "RespuestaPronostico"
+      },
+      "SerieGrupo": {
+        "properties": {
+          "grupo": {
+            "type": "string",
+            "title": "Grupo"
+          },
+          "historia": {
+            "items": {
+              "$ref": "#/components/schemas/PuntoHistoria"
+            },
+            "type": "array",
+            "title": "Historia"
+          },
+          "pronostico": {
+            "items": {
+              "$ref": "#/components/schemas/PuntoPronostico"
+            },
+            "type": "array",
+            "title": "Pronostico"
+          },
+          "seguimiento": {
+            "items": {
+              "$ref": "#/components/schemas/PuntoSeguimiento"
+            },
+            "type": "array",
+            "title": "Seguimiento"
+          },
+          "wape_prueba": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wape Prueba"
+          },
+          "wape_prueba_linea_base": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wape Prueba Linea Base"
+          }
+        },
+        "type": "object",
+        "required": [
+          "grupo",
+          "historia",
+          "pronostico",
+          "seguimiento",
+          "wape_prueba",
+          "wape_prueba_linea_base"
+        ],
+        "title": "SerieGrupo"
       },
       "Usuario": {
         "properties": {

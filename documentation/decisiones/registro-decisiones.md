@@ -451,6 +451,34 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
     sin duplicarse en la segunda evaluación.
   - Ver [alertas.md](../arquitectura/alertas.md).
 
+## D-27 · Monitoreo de la operación en el dashboard
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - Una pestaña **Operación** en el mismo dashboard: ETL, calidad por dimensión, cuarentena,
+    modelo vigente y notificaciones.
+  - Se lee de tres vistas aprobadas nuevas (`api.monitoreo_etl`, `api.monitoreo_calidad` y
+    `api.monitoreo_cuarentena`). Muestran conteos y estados, y del error del ETL solo la primera
+    línea, recortada.
+  - La pestaña de alertas y la de operación se actualizan cada minuto por *polling*, solo con la
+    pestaña del navegador visible.
+  - En calidad se distinguen las filas **enviadas a cuarentena** (no entran al DW) de las
+    **marcadas** (p. ej. atípicos, que sí entran con su marca), para no alarmar en rojo por avisos.
+- **Alternativas consideradas:**
+  - Grafana o Metabase: otro servicio que alojar y asegurar, con otro inicio de sesión.
+  - Dar a `faro_api` lectura sobre `audit` y la cuarentena: expondría los registros rechazados
+    completos.
+  - Solo los resúmenes de GitHub Actions: no se ven desde el dashboard ni cubren el modelo y las
+    notificaciones.
+- **Consecuencias:**
+  - El aviso de frescura se pone amarillo cuando GitHub no ejecuta el ETL programado. Hoy pasa
+    seguido, y queda a la vista en lugar de ocultarse.
+- **Evidencia:**
+  - 8 pruebas de la API con el rol `faro_api`.
+  - 13 pruebas de Vitest (paneles y consulta periódica).
+  - E2E con las capturas 09 a 11.
+  - Ver [alertas.md, sección 8](../arquitectura/alertas.md).
+
 ---
 
 ## Pendientes

@@ -38,6 +38,8 @@ machine-learning/models/*
 .neon
 # Preferencias personales de Claude Code (las compartidas van en .claude/settings.json)
 .claude/settings.local.json
+# Vínculo local con el proyecto de Vercel (lo crea "vercel link"; sus variables van en .env.local)
+.vercel
 
 # ===== Logs =====
 *.log

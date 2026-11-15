@@ -35,7 +35,7 @@ Las decisiones técnicas y su justificación están en
 | 2. Diseño | Arquitectura, staging, grano, dimensiones | ✅ Completa |
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena, zona ready, roles, simulador y ejecución horaria | ✅ Completa |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ✅ Completa |
-| 5. BI | API y dashboard | 🔄 En curso (API lista; faltan el dashboard y la publicación en Vercel) |
+| 5. BI | API y dashboard | 🔄 En curso (API y dashboard listos; falta la publicación en Vercel) |
 | 6. ML y GenAI | Modelo predictivo y asistente | — |
 | 7. Automatización | Alertas y monitoreo | — |
 | 8. Integración | Pruebas end-to-end, despliegue, video | — |
@@ -47,7 +47,7 @@ Las decisiones técnicas y su justificación están en
 | [Arquitectura de la solución](documentation/arquitectura/arquitectura.md) | Capas, flujo de datos, entornos, decisiones de la guía, seguridad y monitoreo |
 | [Diseño del staging y del ETL](documentation/arquitectura/diseno-staging-etl.md) | Zonas, carga incremental, nulos, reglas de calidad, auditoría y recuperación |
 | [Modelo dimensional](documentation/modelos/modelo-dimensional.md) | Grano, esquema estrella, dimensiones, medidas, SCD y productos en varios grupos |
-| [Registro de decisiones](documentation/decisiones/registro-decisiones.md) | D-01 a D-17, con alternativas y justificación |
+| [Registro de decisiones](documentation/decisiones/registro-decisiones.md) | D-01 a D-23, con alternativas y justificación |
 
 ---
 
@@ -55,6 +55,7 @@ Las decisiones técnicas y su justificación están en
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [uv](https://docs.astral.sh/uv/) (instala y gestiona Python 3.12 automáticamente)
+- [Node.js](https://nodejs.org/) 24 (solo para el dashboard web)
 - Git
 
 ## Puesta en marcha (desarrollo local)
@@ -209,6 +210,36 @@ uv run uvicorn backend.app.main:app --reload --port 8000
 | [Catálogo de KPI](documentation/modelos/kpis.md) | Ficha de cada indicador |
 | [Tiempos de respuesta](documentation/pruebas/tiempos-api-local.md) | Mediana por endpoint con los datos completos |
 
+## Dashboard web (React)
+
+![Dashboard de Faro](documentation/capturas/02-dashboard.png)
+
+Con la API corriendo (sección anterior), en otra terminal:
+
+```powershell
+cd frontend
+npm ci          # una sola vez: dependencias exactas (package-lock.json)
+npm run dev     # http://localhost:5173  (las llamadas a /api van a la API del puerto 8000)
+```
+
+Se ingresa con el usuario `demo` y la contraseña `FARO_PASSWORD_DEMO` del `.env`.
+
+| Qué ofrece | Cómo |
+|---|---|
+| 6 KPI con variación contra el año anterior | Flecha y texto, no solo color |
+| Filtros por fechas (con atajos), territorio, categoría de cliente, grupo de producto y vendedor | Una sola fila; se aplican a todo el panel |
+| Tendencia por mes, semana o día | Período actual contra año anterior; los períodos incompletos llevan `*` |
+| Desglose por 8 dimensiones | Clic en una barra o fila = filtro (*drill-down*) |
+| Facturas paginadas con búsqueda | Clic en una factura = detalle por línea |
+| Frescura de los datos y aviso de datos simulados | En el encabezado |
+| Vista de tabla en cada gráfico, modo oscuro y diseño para móvil | Accesibilidad |
+
+Capturas (las genera la prueba E2E): [inicio de sesión](documentation/capturas/01-inicio-sesion.png) ·
+[dashboard](documentation/capturas/02-dashboard.png) ·
+[filtros y drill-down](documentation/capturas/03-filtros-y-drill-down.png) ·
+[detalle de factura](documentation/capturas/04-detalle-factura.png) ·
+[modo oscuro](documentation/capturas/05-modo-oscuro.png) · [móvil](documentation/capturas/06-movil.png).
+
 ## Simulador de ventas (datos SIMULADOS)
 
 WideWorldImporters termina el 31-may-2016. El simulador hace de "sistema de ventas en
@@ -254,6 +285,16 @@ El dueño de las bases solo se usa para desplegar la estructura (workflow *CD - 
 uv run ruff check .            # errores y malas prácticas
 uv run ruff format .           # aplica el formato estándar
 uv run pytest -v               # pruebas (las de integración requieren la base levantada)
+
+cd frontend
+npm run lint                   # ESLint
+npm test                       # pruebas unitarias del dashboard (Vitest)
+npm run build                  # compila TypeScript y genera el sitio (frontend/dist)
+
+# Prueba de punta a punta con un navegador real (solo en local: necesita la base con los datos).
+# Levanta la API y el dashboard si no están corriendo y regenera documentation/capturas.
+npx playwright install chromium   # una sola vez
+npm run e2e
 ```
 
 ## Flujo de trabajo con Git y CI/CD
@@ -289,6 +330,8 @@ docker compose up -d       # vuelve a crear las bases vacías
 | Servicio | Puerto en tu máquina |
 |---|---|
 | PostgreSQL | `5433` (el 5432 lo usa otro proyecto) |
+| API (FastAPI) | `8000` |
+| Dashboard (Vite) | `5173` |
 
 ## Estructura del repositorio
 

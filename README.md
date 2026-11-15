@@ -32,13 +32,22 @@ Las decisiones técnicas y su justificación están en
 |---|---|---|
 | 0. Entorno | Python, Docker, PostgreSQL local, repositorio, CI | ✅ Completa |
 | 1. Descubrimiento | Cargar la fuente (local y Neon), ERD, diccionario, perfilado, preguntas analíticas, CD | ✅ Completa |
-| 2. Diseño | Arquitectura, staging, grano, dimensiones | — |
-| 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena | — |
+| 2. Diseño | Arquitectura, staging, grano, dimensiones | ✅ Completa |
+| 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena | ⏳ Siguiente |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | — |
 | 5. BI | API y dashboard | — |
 | 6. ML y GenAI | Modelo predictivo y asistente | — |
 | 7. Automatización | Alertas y monitoreo | — |
 | 8. Integración | Pruebas end-to-end, despliegue, video | — |
+
+### Documentación de diseño
+
+| Documento | Contenido |
+|---|---|
+| [Arquitectura de la solución](documentation/arquitectura/arquitectura.md) | Capas, flujo de datos, entornos, decisiones de la guía, seguridad y monitoreo |
+| [Diseño del staging y del ETL](documentation/arquitectura/diseno-staging-etl.md) | Zonas, carga incremental, nulos, reglas de calidad, auditoría y recuperación |
+| [Modelo dimensional](documentation/modelos/modelo-dimensional.md) | Grano, esquema estrella, dimensiones, medidas, SCD y productos en varios grupos |
+| [Registro de decisiones](documentation/decisiones/registro-decisiones.md) | D-01 a D-17, con alternativas y justificación |
 
 ---
 

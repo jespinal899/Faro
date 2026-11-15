@@ -57,7 +57,7 @@ export default function TablaFacturas({ params, onAbrir }: Props) {
           rowKey="factura_id"
           loading={cargando}
           dataSource={datos?.filas}
-          scroll={{ x: 900 }}
+          scroll={{ x: 1200 }}
           locale={{ emptyText: "No hay facturas para los filtros elegidos." }}
           onRow={(f) => ({ onClick: () => onAbrir(f.factura_id), style: { cursor: "pointer" } })}
           pagination={{
@@ -79,8 +79,8 @@ export default function TablaFacturas({ params, onAbrir }: Props) {
           columns={[
             { title: "Factura", dataIndex: "factura_id", width: 90 },
             { title: "Fecha", dataIndex: "fecha", sorter: true, render: fFecha, width: 110 },
-            { title: "Cliente", dataIndex: "cliente", ellipsis: true },
-            { title: "Vendedor", dataIndex: "vendedor", ellipsis: true },
+            { title: "Cliente", dataIndex: "cliente", ellipsis: true, width: 220 },
+            { title: "Vendedor", dataIndex: "vendedor", ellipsis: true, width: 160 },
             { title: "Territorio", dataIndex: "territorio", width: 130 },
             { title: "Líneas", dataIndex: "lineas", align: "right", width: 70, className: "num" },
             { title: "Ventas netas", dataIndex: "ventas_netas", sorter: true, align: "right", className: "num", render: fMoneda, width: 130 },

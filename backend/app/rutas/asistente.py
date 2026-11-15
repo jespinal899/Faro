@@ -15,6 +15,7 @@ from functools import lru_cache
 from typing import Literal
 
 import anthropic
+import openai
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -91,6 +92,7 @@ class RespuestaAsistente(BaseModel):
 
 class InfoAsistente(BaseModel):
     disponible: bool
+    proveedor: str
     modelo: str
     limite_hora: int
     limite_dia: int
@@ -101,15 +103,58 @@ class InfoAsistente(BaseModel):
 # ------------------------------------------------------------------ apoyo
 
 
+# Proveedores (decisión D-25). "dialecto": cómo habla su API ("openai" = Chat Completions).
+PROVEEDORES = {
+    "groq": {
+        "dialecto": "openai",
+        "clave": "GROQ_API_KEY",
+        "base_url": "https://api.groq.com/openai/v1",
+        "modelo": "openai/gpt-oss-120b",
+        "esfuerzo": "low",  # reasoning_effort de gpt-oss: menos tokens (límite por minuto)
+    },
+    "ollama": {
+        "dialecto": "openai",
+        "clave": None,  # local, sin clave
+        "base_url": None,  # OLLAMA_BASE_URL o http://localhost:11434/v1
+        "modelo": "qwen3:8b",
+        "esfuerzo": None,
+    },
+    "anthropic": {
+        "dialecto": "anthropic",
+        "clave": "ANTHROPIC_API_KEY",
+        "base_url": None,
+        "modelo": "claude-haiku-5-5",
+        "esfuerzo": "low",
+    },
+}
+
+
+def _proveedor() -> tuple[str, dict, str]:
+    """(nombre, configuración, modelo) del proveedor elegido en la configuración."""
+    c = config()  # también carga el .env en desarrollo
+    nombre = c.asistente_proveedor if c.asistente_proveedor in PROVEEDORES else "groq"
+    p = PROVEEDORES[nombre]
+    return nombre, p, c.asistente_modelo or p["modelo"]
+
+
 @lru_cache
-def cliente() -> anthropic.Anthropic:
-    """Cliente oficial de Anthropic (toma ANTHROPIC_API_KEY del entorno)."""
-    return anthropic.Anthropic(timeout=45.0, max_retries=2)
+def cliente(nombre: str):
+    """Cliente oficial del proveedor; las claves se toman del entorno (nunca del código)."""
+    p = PROVEEDORES[nombre]
+    if p["dialecto"] == "anthropic":
+        return anthropic.Anthropic(timeout=45.0, max_retries=2)
+    if nombre == "ollama":
+        base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+        return openai.OpenAI(base_url=base, api_key="ollama", timeout=180.0, max_retries=0)
+    # Groq: si se llega al límite por minuto, el SDK reintenta respetando retry-after
+    return openai.OpenAI(
+        base_url=p["base_url"], api_key=os.getenv(p["clave"]), timeout=60.0, max_retries=3
+    )
 
 
 def _disponible() -> bool:
-    config()  # carga el .env en desarrollo
-    return bool(os.getenv("ANTHROPIC_API_KEY"))
+    _, p, _ = _proveedor()
+    return p["clave"] is None or bool(os.getenv(p["clave"]))
 
 
 def _usadas(usuario: str) -> tuple[int, int]:
@@ -147,18 +192,29 @@ def _registrar(usuario: str, pregunta: str, r: Respuesta) -> None:
         )
 
 
-def _error_ia(e: anthropic.APIError) -> HTTPException:
+ERRORES_IA = (anthropic.APIError, openai.APIError)
+
+
+def _error_ia(e: Exception) -> HTTPException:
     """Traduce los errores del servicio de IA a mensajes para el usuario (sin detalles internos)."""
-    if isinstance(e, anthropic.RateLimitError):
+    if isinstance(e, anthropic.RateLimitError | openai.RateLimitError):
         return HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            "El servicio de IA está saturado. Intenta en un minuto.",
+            "El servicio de IA llegó a su límite por minuto (plan gratuito). "
+            "Intenta en unos segundos.",
         )
     if isinstance(e, anthropic.BadRequestError) and "credit balance" in str(e).lower():
         return HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE, "El servicio de IA no tiene saldo disponible."
         )
-    if isinstance(e, anthropic.AuthenticationError | anthropic.PermissionDeniedError):
+    if isinstance(
+        e,
+        anthropic.AuthenticationError
+        | anthropic.PermissionDeniedError
+        | openai.AuthenticationError
+        | openai.PermissionDeniedError
+        | openai.NotFoundError,
+    ):
         return HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE, "El asistente no está bien configurado."
         )
@@ -174,9 +230,11 @@ def _error_ia(e: anthropic.APIError) -> HTTPException:
 def info(usuario: UsuarioActual) -> InfoAsistente:
     c = config()
     _, dia = _usadas(usuario.usuario)
+    nombre, _, modelo = _proveedor()
     return InfoAsistente(
         disponible=_disponible(),
-        modelo=c.asistente_modelo,
+        proveedor=nombre,
+        modelo=modelo,
         limite_hora=c.asistente_limite_hora,
         limite_dia=c.asistente_limite_dia,
         usadas_hoy=dia,
@@ -209,15 +267,13 @@ def preguntar(usuario: UsuarioActual, cuerpo: Pregunta) -> RespuestaAsistente:
     while historial and historial[0][0] != "user":  # la conversación empieza con el usuario
         historial.pop(0)
     ctx = Contexto.cargar(usuario)
+    nombre, p, modelo = _proveedor()
+    asistente = Asistente(cliente(nombre), modelo, proveedor=p["dialecto"], esfuerzo=p["esfuerzo"])
     try:
-        r = Asistente(cliente(), c.asistente_modelo).responder(pregunta, historial, ctx, usuario)
-    except anthropic.APIError as e:
-        log.warning("Error del servicio de IA: %s", type(e).__name__)
-        _registrar(
-            usuario.usuario,
-            pregunta,
-            Respuesta(tipo="error", resumen="", modelo=c.asistente_modelo),
-        )
+        r = asistente.responder(pregunta, historial, ctx, usuario)
+    except ERRORES_IA as e:
+        log.warning("Error del servicio de IA (%s): %s", nombre, type(e).__name__)
+        _registrar(usuario.usuario, pregunta, Respuesta(tipo="error", resumen="", modelo=modelo))
         raise _error_ia(e) from e
     _registrar(usuario.usuario, pregunta, r)
 

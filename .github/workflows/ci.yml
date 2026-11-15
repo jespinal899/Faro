@@ -65,10 +65,10 @@ jobs:
       - name: Crear bases (mismo script que usa Docker en local)
         run: psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -f database/scripts/local-init/01_create_databases.sql
       - uses: astral-sh/setup-uv@v10.3.3
-      # Mismas dependencias que el CD: si una prueba necesitara el grupo "seed"
-      # (conector de SQL Server), debe fallar aquí y no en producción.
+      # Mismas dependencias que el CD más el grupo "ml" (pruebas del pronóstico). Si una
+      # prueba necesitara el grupo "seed" (SQL Server), debe fallar aquí y no en producción.
       - name: Instalar dependencias exactas (uv.lock)
-        run: uv sync --locked
+        run: uv sync --locked --group ml
       - name: Ejecutar pruebas
         run: uv run pytest -v
 

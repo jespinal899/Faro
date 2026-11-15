@@ -8,7 +8,7 @@
 import os
 from pathlib import Path
 
-import migrar_wwi as mig
+import mapeo_wwi as mig
 import psycopg
 import pytest
 from dotenv import load_dotenv

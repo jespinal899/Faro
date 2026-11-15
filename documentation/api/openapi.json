@@ -1247,10 +1247,533 @@
           }
         }
       }
+    },
+    "/api/asistente/info": {
+      "get": {
+        "tags": [
+          "Asistente de IA"
+        ],
+        "summary": "Estado y límites del asistente",
+        "operationId": "info_api_asistente_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InfoAsistente"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/asistente": {
+      "post": {
+        "tags": [
+          "Asistente de IA"
+        ],
+        "summary": "Preguntar al asistente",
+        "description": "Responde una pregunta sobre las ventas consultando el DW con herramientas controladas.\n\nCada hecho cita las consultas que lo respaldan (incluidas en la respuesta), las\npredicciones van aparte y las interpretaciones se identifican como generadas por IA.",
+        "operationId": "preguntar_api_asistente_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Pregunta"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaAsistente"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alertas/resumen": {
+      "get": {
+        "tags": [
+          "Alertas"
+        ],
+        "summary": "Cuántas alertas nuevas hay",
+        "operationId": "resumen_api_alertas_resumen_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumenAlertas"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alertas": {
+      "get": {
+        "tags": [
+          "Alertas"
+        ],
+        "summary": "Alertas, de la más reciente a la más antigua",
+        "operationId": "lista_api_alertas_get",
+        "parameters": [
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "nueva",
+                      "atendida",
+                      "descartada",
+                      "resuelta"
+                    ],
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          },
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limite"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Alerta"
+                  },
+                  "title": "Response Lista Api Alertas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alertas/{alerta_id}": {
+      "get": {
+        "tags": [
+          "Alertas"
+        ],
+        "summary": "Detalle de una alerta",
+        "description": "Contenido completo de la alerta, con cada intento de entrega del correo.",
+        "operationId": "detalle_api_alertas__alerta_id__get",
+        "parameters": [
+          {
+            "name": "alerta_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 4611686018427387904,
+              "minimum": 1,
+              "title": "Alerta Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetalleAlerta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Alertas"
+        ],
+        "summary": "Cambiar el estado",
+        "description": "Marca la alerta como atendida, descartada o resuelta (o la reabre como nueva). Queda\nregistrado quién y cuándo, con una nota opcional.",
+        "operationId": "cambiar_estado_api_alertas__alerta_id__patch",
+        "parameters": [
+          {
+            "name": "alerta_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 4611686018427387904,
+              "minimum": 1,
+              "title": "Alerta Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CambioEstado"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetalleAlerta"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/monitoreo": {
+      "get": {
+        "tags": [
+          "Operación"
+        ],
+        "summary": "Estado de la operación",
+        "description": "Últimas ejecuciones del ETL, calidad de la última ejecución evaluada por dimensión,\ncuarentena pendiente, modelo vigente y estado de las notificaciones.",
+        "operationId": "monitoreo_api_monitoreo_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaMonitoreo"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AfirmacionSalida": {
+        "properties": {
+          "texto": {
+            "type": "string",
+            "title": "Texto"
+          },
+          "consultas": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Consultas"
+          },
+          "respaldada": {
+            "type": "boolean",
+            "title": "Respaldada"
+          }
+        },
+        "type": "object",
+        "required": [
+          "texto",
+          "consultas",
+          "respaldada"
+        ],
+        "title": "AfirmacionSalida"
+      },
+      "Alerta": {
+        "properties": {
+          "alerta_id": {
+            "type": "integer",
+            "title": "Alerta Id"
+          },
+          "creada_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Creada En"
+          },
+          "regla": {
+            "type": "string",
+            "title": "Regla"
+          },
+          "regla_nombre": {
+            "type": "string",
+            "title": "Regla Nombre"
+          },
+          "severidad": {
+            "type": "string",
+            "enum": [
+              "advertencia",
+              "critica"
+            ],
+            "title": "Severidad"
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "regla",
+              "modelo"
+            ],
+            "title": "Origen"
+          },
+          "indicador": {
+            "type": "string",
+            "title": "Indicador"
+          },
+          "entidad": {
+            "type": "string",
+            "title": "Entidad"
+          },
+          "valor_observado": {
+            "type": "number",
+            "title": "Valor Observado"
+          },
+          "umbral": {
+            "type": "number",
+            "title": "Umbral"
+          },
+          "referencia": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referencia"
+          },
+          "unidad": {
+            "type": "string",
+            "title": "Unidad"
+          },
+          "periodo_desde": {
+            "type": "string",
+            "format": "date",
+            "title": "Periodo Desde"
+          },
+          "periodo_hasta": {
+            "type": "string",
+            "format": "date",
+            "title": "Periodo Hasta"
+          },
+          "detalle": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Detalle"
+          },
+          "mensaje": {
+            "type": "string",
+            "title": "Mensaje"
+          },
+          "explicacion_ia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explicacion Ia"
+          },
+          "accion_recomendada_ia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accion Recomendada Ia"
+          },
+          "ia_modelo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ia Modelo"
+          },
+          "incluye_simulados": {
+            "type": "boolean",
+            "title": "Incluye Simulados"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "nueva",
+              "atendida",
+              "descartada",
+              "resuelta"
+            ],
+            "title": "Estado"
+          },
+          "estado_actualizado_en": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado Actualizado En"
+          },
+          "estado_actualizado_por": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado Actualizado Por"
+          },
+          "nota": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota"
+          },
+          "correo_enviado": {
+            "type": "boolean",
+            "title": "Correo Enviado"
+          },
+          "intentos_correo": {
+            "type": "integer",
+            "title": "Intentos Correo"
+          },
+          "ultimo_intento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultimo Intento"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alerta_id",
+          "creada_en",
+          "regla",
+          "regla_nombre",
+          "severidad",
+          "origen",
+          "indicador",
+          "entidad",
+          "valor_observado",
+          "umbral",
+          "referencia",
+          "unidad",
+          "periodo_desde",
+          "periodo_hasta",
+          "detalle",
+          "mensaje",
+          "explicacion_ia",
+          "accion_recomendada_ia",
+          "ia_modelo",
+          "incluye_simulados",
+          "estado",
+          "estado_actualizado_en",
+          "estado_actualizado_por",
+          "nota",
+          "correo_enviado",
+          "intentos_correo",
+          "ultimo_intento"
+        ],
+        "title": "Alerta"
+      },
       "Calidad": {
         "properties": {
           "metrica": {
@@ -1346,6 +1869,37 @@
         ],
         "title": "CalidadHorizonte"
       },
+      "CambioEstado": {
+        "properties": {
+          "estado": {
+            "type": "string",
+            "enum": [
+              "nueva",
+              "atendida",
+              "descartada",
+              "resuelta"
+            ],
+            "title": "Estado"
+          },
+          "nota": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota"
+          }
+        },
+        "type": "object",
+        "required": [
+          "estado"
+        ],
+        "title": "CambioEstado"
+      },
       "Comparacion": {
         "properties": {
           "tipo": {
@@ -1391,6 +1945,60 @@
         ],
         "title": "Comparacion"
       },
+      "ConsultaSalida": {
+        "properties": {
+          "numero": {
+            "type": "integer",
+            "title": "Numero"
+          },
+          "herramienta": {
+            "type": "string",
+            "title": "Herramienta"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "parametros": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Parametros"
+          },
+          "resultado": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resultado"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "numero",
+          "herramienta",
+          "descripcion",
+          "parametros",
+          "resultado",
+          "error"
+        ],
+        "title": "ConsultaSalida"
+      },
       "Credenciales": {
         "properties": {
           "usuario": {
@@ -1412,6 +2020,482 @@
           "password"
         ],
         "title": "Credenciales"
+      },
+      "Cuarentena": {
+        "properties": {
+          "tabla": {
+            "type": "string",
+            "title": "Tabla"
+          },
+          "regla": {
+            "type": "string",
+            "title": "Regla"
+          },
+          "pendientes": {
+            "type": "integer",
+            "title": "Pendientes"
+          },
+          "resueltos": {
+            "type": "integer",
+            "title": "Resueltos"
+          },
+          "ultimo_rechazo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultimo Rechazo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tabla",
+          "regla",
+          "pendientes",
+          "resueltos",
+          "ultimo_rechazo"
+        ],
+        "title": "Cuarentena"
+      },
+      "DetalleAlerta": {
+        "properties": {
+          "alerta_id": {
+            "type": "integer",
+            "title": "Alerta Id"
+          },
+          "creada_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Creada En"
+          },
+          "regla": {
+            "type": "string",
+            "title": "Regla"
+          },
+          "regla_nombre": {
+            "type": "string",
+            "title": "Regla Nombre"
+          },
+          "severidad": {
+            "type": "string",
+            "enum": [
+              "advertencia",
+              "critica"
+            ],
+            "title": "Severidad"
+          },
+          "origen": {
+            "type": "string",
+            "enum": [
+              "regla",
+              "modelo"
+            ],
+            "title": "Origen"
+          },
+          "indicador": {
+            "type": "string",
+            "title": "Indicador"
+          },
+          "entidad": {
+            "type": "string",
+            "title": "Entidad"
+          },
+          "valor_observado": {
+            "type": "number",
+            "title": "Valor Observado"
+          },
+          "umbral": {
+            "type": "number",
+            "title": "Umbral"
+          },
+          "referencia": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referencia"
+          },
+          "unidad": {
+            "type": "string",
+            "title": "Unidad"
+          },
+          "periodo_desde": {
+            "type": "string",
+            "format": "date",
+            "title": "Periodo Desde"
+          },
+          "periodo_hasta": {
+            "type": "string",
+            "format": "date",
+            "title": "Periodo Hasta"
+          },
+          "detalle": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Detalle"
+          },
+          "mensaje": {
+            "type": "string",
+            "title": "Mensaje"
+          },
+          "explicacion_ia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explicacion Ia"
+          },
+          "accion_recomendada_ia": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accion Recomendada Ia"
+          },
+          "ia_modelo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ia Modelo"
+          },
+          "incluye_simulados": {
+            "type": "boolean",
+            "title": "Incluye Simulados"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "nueva",
+              "atendida",
+              "descartada",
+              "resuelta"
+            ],
+            "title": "Estado"
+          },
+          "estado_actualizado_en": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado Actualizado En"
+          },
+          "estado_actualizado_por": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado Actualizado Por"
+          },
+          "nota": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nota"
+          },
+          "correo_enviado": {
+            "type": "boolean",
+            "title": "Correo Enviado"
+          },
+          "intentos_correo": {
+            "type": "integer",
+            "title": "Intentos Correo"
+          },
+          "ultimo_intento": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultimo Intento"
+          },
+          "envios": {
+            "items": {
+              "$ref": "#/components/schemas/Envio"
+            },
+            "type": "array",
+            "title": "Envios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "alerta_id",
+          "creada_en",
+          "regla",
+          "regla_nombre",
+          "severidad",
+          "origen",
+          "indicador",
+          "entidad",
+          "valor_observado",
+          "umbral",
+          "referencia",
+          "unidad",
+          "periodo_desde",
+          "periodo_hasta",
+          "detalle",
+          "mensaje",
+          "explicacion_ia",
+          "accion_recomendada_ia",
+          "ia_modelo",
+          "incluye_simulados",
+          "estado",
+          "estado_actualizado_en",
+          "estado_actualizado_por",
+          "nota",
+          "correo_enviado",
+          "intentos_correo",
+          "ultimo_intento",
+          "envios"
+        ],
+        "title": "DetalleAlerta"
+      },
+      "DimensionCalidad": {
+        "properties": {
+          "dimension": {
+            "type": "string",
+            "title": "Dimension"
+          },
+          "reglas": {
+            "type": "integer",
+            "title": "Reglas"
+          },
+          "evaluadas": {
+            "type": "integer",
+            "title": "Evaluadas"
+          },
+          "fallaron": {
+            "type": "integer",
+            "title": "Fallaron"
+          },
+          "a_cuarentena": {
+            "type": "integer",
+            "title": "A Cuarentena"
+          },
+          "marcadas": {
+            "type": "integer",
+            "title": "Marcadas"
+          },
+          "cumplimiento_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cumplimiento Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dimension",
+          "reglas",
+          "evaluadas",
+          "fallaron",
+          "a_cuarentena",
+          "marcadas",
+          "cumplimiento_pct"
+        ],
+        "title": "DimensionCalidad"
+      },
+      "EjecucionEtl": {
+        "properties": {
+          "ejecucion_id": {
+            "type": "integer",
+            "title": "Ejecucion Id"
+          },
+          "proceso": {
+            "type": "string",
+            "title": "Proceso"
+          },
+          "disparador": {
+            "type": "string",
+            "title": "Disparador"
+          },
+          "modo": {
+            "type": "string",
+            "title": "Modo"
+          },
+          "inicio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Inicio"
+          },
+          "fin": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fin"
+          },
+          "segundos": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segundos"
+          },
+          "estado": {
+            "type": "string",
+            "title": "Estado"
+          },
+          "leidas": {
+            "type": "integer",
+            "title": "Leidas"
+          },
+          "nuevas": {
+            "type": "integer",
+            "title": "Nuevas"
+          },
+          "actualizadas": {
+            "type": "integer",
+            "title": "Actualizadas"
+          },
+          "rechazadas": {
+            "type": "integer",
+            "title": "Rechazadas"
+          },
+          "sin_cambios": {
+            "type": "integer",
+            "title": "Sin Cambios"
+          },
+          "reconciliado": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciliado"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ejecucion_id",
+          "proceso",
+          "disparador",
+          "modo",
+          "inicio",
+          "fin",
+          "segundos",
+          "estado",
+          "leidas",
+          "nuevas",
+          "actualizadas",
+          "rechazadas",
+          "sin_cambios",
+          "reconciliado",
+          "error"
+        ],
+        "title": "EjecucionEtl"
+      },
+      "Envio": {
+        "properties": {
+          "canal": {
+            "type": "string",
+            "title": "Canal"
+          },
+          "intento": {
+            "type": "integer",
+            "title": "Intento"
+          },
+          "intentado_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Intentado En"
+          },
+          "resultado": {
+            "type": "string",
+            "enum": [
+              "enviado",
+              "fallido"
+            ],
+            "title": "Resultado"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "canal",
+          "intento",
+          "intentado_en",
+          "resultado",
+          "error"
+        ],
+        "title": "Envio"
       },
       "EstadoDatos": {
         "properties": {
@@ -1494,6 +2578,75 @@
           "lineas_simuladas"
         ],
         "title": "EstadoDatos"
+      },
+      "EvaluacionAlertas": {
+        "properties": {
+          "evaluacion_id": {
+            "type": "integer",
+            "title": "Evaluacion Id"
+          },
+          "disparador": {
+            "type": "string",
+            "title": "Disparador"
+          },
+          "inicio": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Inicio"
+          },
+          "fin": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fin"
+          },
+          "estado": {
+            "type": "string",
+            "title": "Estado"
+          },
+          "reglas_evaluadas": {
+            "type": "integer",
+            "title": "Reglas Evaluadas"
+          },
+          "alertas_nuevas": {
+            "type": "integer",
+            "title": "Alertas Nuevas"
+          },
+          "correos_enviados": {
+            "type": "integer",
+            "title": "Correos Enviados"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluacion_id",
+          "disparador",
+          "inicio",
+          "fin",
+          "estado",
+          "reglas_evaluadas",
+          "alertas_nuevas",
+          "correos_enviados",
+          "error"
+        ],
+        "title": "EvaluacionAlertas"
       },
       "Excluido": {
         "properties": {
@@ -1947,6 +3100,52 @@
         ],
         "title": "Indicadores"
       },
+      "InfoAsistente": {
+        "properties": {
+          "disponible": {
+            "type": "boolean",
+            "title": "Disponible"
+          },
+          "proveedor": {
+            "type": "string",
+            "title": "Proveedor"
+          },
+          "modelo": {
+            "type": "string",
+            "title": "Modelo"
+          },
+          "limite_hora": {
+            "type": "integer",
+            "title": "Limite Hora"
+          },
+          "limite_dia": {
+            "type": "integer",
+            "title": "Limite Dia"
+          },
+          "usadas_hoy": {
+            "type": "integer",
+            "title": "Usadas Hoy"
+          },
+          "ejemplos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Ejemplos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "disponible",
+          "proveedor",
+          "modelo",
+          "limite_hora",
+          "limite_dia",
+          "usadas_hoy",
+          "ejemplos"
+        ],
+        "title": "InfoAsistente"
+      },
       "LineaFactura": {
         "properties": {
           "linea_factura_id": {
@@ -2075,6 +3274,137 @@
         ],
         "title": "Modelo"
       },
+      "ModeloVigente": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "algoritmo": {
+            "type": "string",
+            "title": "Algoritmo"
+          },
+          "entrenado_en": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Entrenado En"
+          },
+          "datos_hasta": {
+            "type": "string",
+            "format": "date",
+            "title": "Datos Hasta"
+          },
+          "commit_codigo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commit Codigo"
+          },
+          "wape_prueba": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wape Prueba"
+          },
+          "wape_prueba_linea_base": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wape Prueba Linea Base"
+          },
+          "pronostico_origen": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pronostico Origen"
+          },
+          "pronostico_generado_en": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pronostico Generado En"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "algoritmo",
+          "entrenado_en",
+          "datos_hasta",
+          "commit_codigo",
+          "wape_prueba",
+          "wape_prueba_linea_base",
+          "pronostico_origen",
+          "pronostico_generado_en"
+        ],
+        "title": "ModeloVigente"
+      },
+      "Notificaciones": {
+        "properties": {
+          "evaluaciones": {
+            "items": {
+              "$ref": "#/components/schemas/EvaluacionAlertas"
+            },
+            "type": "array",
+            "title": "Evaluaciones"
+          },
+          "alertas_por_estado": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Alertas Por Estado"
+          },
+          "correos_enviados": {
+            "type": "integer",
+            "title": "Correos Enviados"
+          },
+          "intentos_fallidos": {
+            "type": "integer",
+            "title": "Intentos Fallidos"
+          },
+          "alertas_sin_entregar": {
+            "type": "integer",
+            "title": "Alertas Sin Entregar"
+          }
+        },
+        "type": "object",
+        "required": [
+          "evaluaciones",
+          "alertas_por_estado",
+          "correos_enviados",
+          "intentos_fallidos",
+          "alertas_sin_entregar"
+        ],
+        "title": "Notificaciones"
+      },
       "Opcion": {
         "properties": {
           "id": {
@@ -2197,6 +3527,30 @@
           "filas"
         ],
         "title": "PaginaFacturas"
+      },
+      "Pregunta": {
+        "properties": {
+          "pregunta": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Pregunta"
+          },
+          "historial": {
+            "items": {
+              "$ref": "#/components/schemas/Turno"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "title": "Historial"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pregunta"
+        ],
+        "title": "Pregunta"
       },
       "PuntoHistoria": {
         "properties": {
@@ -2393,6 +3747,185 @@
         ],
         "title": "PuntoTendencia"
       },
+      "ReglaCalidad": {
+        "properties": {
+          "tabla": {
+            "type": "string",
+            "title": "Tabla"
+          },
+          "regla": {
+            "type": "string",
+            "title": "Regla"
+          },
+          "dimension": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimension"
+          },
+          "descripcion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Descripcion"
+          },
+          "accion": {
+            "type": "string",
+            "title": "Accion"
+          },
+          "evaluadas": {
+            "type": "integer",
+            "title": "Evaluadas"
+          },
+          "fallaron": {
+            "type": "integer",
+            "title": "Fallaron"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tabla",
+          "regla",
+          "dimension",
+          "descripcion",
+          "accion",
+          "evaluadas",
+          "fallaron"
+        ],
+        "title": "ReglaCalidad"
+      },
+      "RespuestaAsistente": {
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "respuesta",
+              "sin_datos",
+              "fuera_de_alcance",
+              "aclaracion",
+              "error"
+            ],
+            "title": "Tipo"
+          },
+          "resumen": {
+            "type": "string",
+            "title": "Resumen"
+          },
+          "hechos": {
+            "items": {
+              "$ref": "#/components/schemas/AfirmacionSalida"
+            },
+            "type": "array",
+            "title": "Hechos"
+          },
+          "predicciones": {
+            "items": {
+              "$ref": "#/components/schemas/AfirmacionSalida"
+            },
+            "type": "array",
+            "title": "Predicciones"
+          },
+          "interpretaciones": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interpretaciones"
+          },
+          "sugerencias": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sugerencias"
+          },
+          "consultas": {
+            "items": {
+              "$ref": "#/components/schemas/ConsultaSalida"
+            },
+            "type": "array",
+            "title": "Consultas"
+          },
+          "datos_al": {
+            "type": "string",
+            "format": "date",
+            "title": "Datos Al"
+          },
+          "ultima_carga": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultima Carga"
+          },
+          "incluye_simulados": {
+            "type": "boolean",
+            "title": "Incluye Simulados"
+          },
+          "generado_por": {
+            "type": "string",
+            "title": "Generado Por"
+          },
+          "tokens_entrada": {
+            "type": "integer",
+            "title": "Tokens Entrada"
+          },
+          "tokens_salida": {
+            "type": "integer",
+            "title": "Tokens Salida"
+          },
+          "costo_usd": {
+            "type": "number",
+            "title": "Costo Usd"
+          },
+          "duracion_ms": {
+            "type": "integer",
+            "title": "Duracion Ms"
+          },
+          "advertencias": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Advertencias"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tipo",
+          "resumen",
+          "hechos",
+          "predicciones",
+          "interpretaciones",
+          "sugerencias",
+          "consultas",
+          "datos_al",
+          "ultima_carga",
+          "incluye_simulados",
+          "generado_por",
+          "tokens_entrada",
+          "tokens_salida",
+          "costo_usd",
+          "duracion_ms",
+          "advertencias"
+        ],
+        "title": "RespuestaAsistente"
+      },
       "RespuestaDesglose": {
         "properties": {
           "dimension": {
@@ -2450,6 +3983,73 @@
           "comparacion"
         ],
         "title": "RespuestaKpis"
+      },
+      "RespuestaMonitoreo": {
+        "properties": {
+          "etl": {
+            "items": {
+              "$ref": "#/components/schemas/EjecucionEtl"
+            },
+            "type": "array",
+            "title": "Etl"
+          },
+          "calidad_ejecucion_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calidad Ejecucion Id"
+          },
+          "calidad": {
+            "items": {
+              "$ref": "#/components/schemas/ReglaCalidad"
+            },
+            "type": "array",
+            "title": "Calidad"
+          },
+          "dimensiones": {
+            "items": {
+              "$ref": "#/components/schemas/DimensionCalidad"
+            },
+            "type": "array",
+            "title": "Dimensiones"
+          },
+          "cuarentena": {
+            "items": {
+              "$ref": "#/components/schemas/Cuarentena"
+            },
+            "type": "array",
+            "title": "Cuarentena"
+          },
+          "modelo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ModeloVigente"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notificaciones": {
+            "$ref": "#/components/schemas/Notificaciones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "etl",
+          "calidad_ejecucion_id",
+          "calidad",
+          "dimensiones",
+          "cuarentena",
+          "modelo",
+          "notificaciones"
+        ],
+        "title": "RespuestaMonitoreo"
       },
       "RespuestaPronostico": {
         "properties": {
@@ -2522,6 +4122,38 @@
         ],
         "title": "RespuestaPronostico"
       },
+      "ResumenAlertas": {
+        "properties": {
+          "nuevas": {
+            "type": "integer",
+            "title": "Nuevas"
+          },
+          "criticas_nuevas": {
+            "type": "integer",
+            "title": "Criticas Nuevas"
+          },
+          "ultima_creada_en": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultima Creada En"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nuevas",
+          "criticas_nuevas",
+          "ultima_creada_en"
+        ],
+        "title": "ResumenAlertas",
+        "description": "Para el contador de la pestaña (se consulta periódicamente)."
+      },
       "SerieGrupo": {
         "properties": {
           "grupo": {
@@ -2582,6 +4214,31 @@
           "wape_prueba_linea_base"
         ],
         "title": "SerieGrupo"
+      },
+      "Turno": {
+        "properties": {
+          "rol": {
+            "type": "string",
+            "enum": [
+              "usuario",
+              "asistente"
+            ],
+            "title": "Rol"
+          },
+          "texto": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Texto"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rol",
+          "texto"
+        ],
+        "title": "Turno"
       },
       "Usuario": {
         "properties": {

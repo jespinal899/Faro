@@ -257,6 +257,26 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
 - **Límite conocido:** los datos simulados son aleatorios alrededor del promedio histórico.
   Sirven para demostrar la carga incremental y las alertas, no para evaluar el pronóstico.
 
+## D-21 · Carga del Data Warehouse
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - El DW se carga en la **misma transacción** que el staging: si falla, no queda nada a medias.
+  - Orden: dimensiones SCD1 → dimensiones SCD2 → puente → hechos (las claves se resuelven
+    antes de insertar los hechos, como pide la guía).
+  - Hechos con **UPSERT** por `linea_factura_id`, solo para las líneas afectadas por el lote;
+    con el DW vacío se cargan todos (primer despliegue).
+  - Cada clave del hecho se resuelve con la versión **vigente en la fecha de la venta**.
+  - **Miembro desconocido (-1)** si falta la dimensión: la venta no se pierde, queda contada en la
+    auditoría y una ejecución posterior la **reasigna** cuando la dimensión aparece.
+  - **SCD2 sobre identificadores**, no sobre nombres. Las pruebas mostraron que versionar por el
+    nombre del cliente de facturación creaba una versión nueva al renombrar un cliente (casi
+    todos se facturan a sí mismos). Los nombres se refrescan según el ID en todas las versiones.
+  - Una versión nueva rige desde el **día siguiente a la última venta cargada** (reloj de negocio),
+    válido tanto para la operación real como para la simulada.
+- **Evidencia:** 11 controles de validación (`validar_dw.py`) que corren después de cada carga en
+  producción, más 10 pruebas automáticas del DW.
+
 ---
 
 ## Pendientes

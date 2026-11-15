@@ -1,0 +1,70 @@
+# Demostración de una alerta de punta a punta con un EVENTO SIMULADO (Fase 7, D-26).
+#
+# La guía permite simular un evento en la demo "pero debe identificarse como simulación":
+#   1. El simulador inserta varios días hábiles con poco volumen de ventas (marcados como
+#      simulados en la fuente y en el DW).
+#   2. El ETL los carga en staging y en el DW, y se valida el DW.
+#   3. El evaluador detecta la caída de ventas de la última semana completa, la registra, le
+#      agrega una explicación generada por IA y envía el correo (alerta marcada "incluye
+#      ventas simuladas").
+#
+# Solo a mano: Actions -> Alertas - Evento simulado -> Run workflow. Cada ejecución agrega
+# días simulados a producción; con 8 días al 40 % se completa una semana entera de baja venta.
+# Cada paso usa su rol de mínimo privilegio.
+
+name: Alertas - Evento simulado
+
+on:
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: "Días hábiles a simular (8 completan una semana entera de baja venta)"
+        type: number
+        default: 8
+      factor_volumen:
+        description: "Volumen de ventas de esos días (0.4 = 40 % de lo normal)"
+        type: string
+        default: "0.4"
+
+concurrency:
+  group: etl-ventas-production # nunca a la vez que el ETL
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    name: Evento simulado → ETL → alerta
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Instalar dependencias exactas (uv.lock)
+        run: uv sync --locked
+
+      - name: 1. Simular días de baja venta (SIMULACIÓN)
+        env:
+          SIMULADOR_DATABASE_URL: ${{ secrets.NEON_APP_SOURCE_URL }}
+        run: >-
+          uv run python -m simulador.ventas --dias "${{ inputs.dias }}"
+          --factor-volumen "${{ inputs.factor_volumen }}"
+
+      - name: 2. Cargar con el ETL (staging + DW)
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.NEON_ETL_SOURCE_URL }}
+          ANALYTICS_DATABASE_URL: ${{ secrets.NEON_ETL_ANALYTICS_URL }}
+        run: |
+          uv run python -m etl.orchestration.pipeline --modo incremental --disparador manual
+          uv run python database/scripts/validar_dw.py
+
+      - name: 3. Evaluar alertas y notificar
+        env:
+          ALERTAS_DATABASE_URL: ${{ secrets.NEON_ALERTAS_ANALYTICS_URL }}
+          SMTP_USUARIO: ${{ secrets.SMTP_USUARIO }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERTAS_DESTINO: ${{ secrets.ALERTAS_DESTINO }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: uv run python -m notifications evaluar --disparador demo

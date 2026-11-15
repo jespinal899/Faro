@@ -187,6 +187,9 @@ GRANULARIDADES = {
     "dia": ("day", "364 days"),
 }
 
+# Campos de Factura que se calculan sumando las líneas (no se copian de la cabecera)
+TOTALES_FACTURA = {"ventas_netas", "utilidad", "lineas"}
+
 ORDENES = {
     "fecha_desc": "fecha DESC, factura_id DESC",
     "fecha_asc": "fecha, factura_id",
@@ -397,9 +400,9 @@ def factura(usuario: UsuarioActual, factura_id: Annotated[int, Path(ge=1)]) -> F
         ).fetchall()
     if not lineas:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Factura no encontrada")
-    cab = lineas[0]
+    cab = lineas[0]  # los datos de cabecera se repiten en cada línea
     return Factura(
-        **{k: cab[k] for k in Factura.model_fields if k in cab and k != "lineas"},
+        **{k: cab[k] for k in Factura.model_fields if k in cab and k not in TOTALES_FACTURA},
         ventas_netas=sum(x["venta_neta"] for x in lineas),
         utilidad=sum(x["utilidad"] for x in lineas),
         lineas=[LineaFactura(**x) for x in lineas],

@@ -371,11 +371,47 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
   - Se documenta como resultado, no se esconde: la serie es sobre todo "nivel + ruido". Ver
     [modelo-ml.md](../modelos/modelo-ml.md).
 
+## D-25 · Asistente de IA generativa: Claude Haiku 5.5 con herramientas controladas
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - **Proveedor y modelo:** API de Anthropic con **Claude Haiku 5.5**, el modelo más
+    económico (US$0.10 / US$0.50 por millón de tokens). El usuario lo eligió para no gastar.
+    Corre dentro de la API en Vercel, así que funciona en producción. El modelo se cambia con
+    `ASISTENTE_MODELO`.
+  - **Acceso a datos:** el modelo no escribe SQL. Solo pide 4 herramientas de un catálogo
+    cerrado (indicadores, tendencia, ranking y pronóstico), que validan sus parámetros y usan
+    las mismas consultas del dashboard con el rol de solo lectura `faro_api`. Sin datos de
+    clientes ni de facturas.
+  - **Respuesta:** JSON con hechos (cada uno cita sus consultas, y el servidor verifica que
+    existan), predicciones (solo del pronóstico), interpretaciones y sugerencias. Tipos
+    `sin_datos`, `fuera_de_alcance` y `aclaracion` para cuando no hay respaldo.
+  - **Controles:** sesión, 20 preguntas por hora y 100 por día por usuario, entrada de hasta 500
+    caracteres, máximo 6 llamadas al modelo por pregunta, y registro en
+    `app.consulta_asistente` sin la respuesta.
+  - **Rol `faro_ia` descartado:** el catálogo cerrado se aplica en el código y la base solo
+    expone vistas de lectura a `faro_api`. Un rol aparte no agregaría control: el modelo nunca
+    toca la base.
+- **Alternativas consideradas:**
+  - **Ollama local**, que la guía permite: costo cero, pero solo funciona en la PC del usuario
+    (no en producción), corre en CPU (20–60 s por respuesta) y es menos fiable con herramientas
+    en español.
+  - **Texto a SQL generado por la IA:** la guía lo desaconseja (acceso irrestricto).
+  - **Claude Opus o Sonnet:** mejor calidad, pero de 20 a 40 veces más caros.
+  - **LangChain / LlamaIndex:** innecesarios para 4 herramientas; el SDK oficial alcanza.
+- **Consecuencias:**
+  - El uso de la API se paga aparte del plan de Claude, con créditos prepagados en la consola.
+  - El costo real es de centavos (menos de US$0.002 por pregunta) y cada respuesta muestra el suyo.
+- **Evidencia:**
+  - 13 pruebas del motor, 6 de la API y 5 del dashboard, todas sin red ni costo.
+  - Una evaluación con el modelo real, de 14 preguntas, con valores esperados por SQL independiente.
+  - Ver [asistente-ia.md](../arquitectura/asistente-ia.md).
+
 ---
 
 ## Pendientes
 
 | Tema | Fase |
 |---|---|
-| Rol `faro_ia` y proveedor de IA generativa | 6 |
 | Canales de notificación | 7 |
+| Disparador fiable para los procesos programados (GitHub retrasa o descarta los cron) | 7 |

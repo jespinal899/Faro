@@ -340,12 +340,42 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
   - Una prueba E2E con Playwright que recorre el flujo completo y genera las
     [capturas](../capturas/).
 
+## D-24 · Modelo de Machine Learning: pronóstico semanal por grupo de producto
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - **Problema:** pronosticar la venta neta semanal de cada grupo principal de producto para
+    las 4 semanas siguientes (P10). Lo usa compras para decidir cuánto reponer.
+  - **Datos:** la vista controlada `ml.ventas_semanales`, solo ventas reales y semanas completas.
+    Un grupo necesita 2 años de historia: Novelty Items (lanzado en 2016) queda excluido con su motivo.
+  - **Modelo:** uno solo para los 8 grupos (scikit-learn), sobre ventas relativas al nivel
+    reciente, con 13 rezagos y variables de contexto. Se entrena con pesos por volumen.
+  - **Evaluación:** validación cruzada temporal de un año (4 pliegues de 13 semanas) para elegir,
+    y 16 semanas de prueba para medir. Se compara contra 4 líneas base, la referencia es la media
+    móvil de 13 semanas y la métrica principal es el WAPE. El rango probable del 80 % se calibra
+    fuera de pliegue.
+  - **Servicio:** el registro de versiones vive en `ml.modelo`, las predicciones en `ml.pronostico`
+    y el proceso programado es el workflow *ML - Pronóstico* (lunes y a mano). Todo corre con el
+    rol `faro_ml`, que no ve el DW.
+- **Alternativas consideradas:**
+  - Clasificación de abandono de clientes: los 663 clientes compran todo el período, así que no
+    hay abandono que aprender.
+  - Segmentación: no responde una decisión con métrica verificable.
+  - Un modelo estadístico por grupo (ARIMA o suavizado exponencial): 8 modelos con ~3 años cada
+    uno es poca historia para estimar estacionalidad, y la guía prioriza scikit-learn.
+  - MLflow: la guía lo da como extensión. El registro en PostgreSQL cumple lo exigido (versión,
+    parámetros, métricas y fecha) sin otro servicio.
+- **Consecuencias:**
+  - En un año completo el modelo **empata** con el promedio de 13 semanas (11.5 % contra 11.5 %).
+  - En prueba lo mejora un 7 % (13.5 % contra 14.6 %), con su rango calibrado (76 % de cobertura).
+  - Se documenta como resultado, no se esconde: la serie es sobre todo "nivel + ruido". Ver
+    [modelo-ml.md](../modelos/modelo-ml.md).
+
 ---
 
 ## Pendientes
 
 | Tema | Fase |
 |---|---|
-| Rol `faro_ia` | 6 |
-| Modelo de ML y proveedor de IA generativa | 6 |
+| Rol `faro_ia` y proveedor de IA generativa | 6 |
 | Canales de notificación | 7 |

@@ -1,0 +1,63 @@
+# API de Faro — documentación y contratos de datos
+
+La API (FastAPI) es la única puerta entre el navegador y los datos: **el navegador nunca se
+conecta a la base**. Todos los indicadores salen del Data Warehouse, a través de las vistas
+aprobadas del esquema `api`.
+
+- **Documentación interactiva:** `/api/docs` (en local: http://localhost:8000/api/docs).
+- **Contrato completo (OpenAPI 3):** [openapi.json](openapi.json). Se genera desde el código con
+  `uv run python -m backend.exportar_openapi`, así que siempre coincide con la API real.
+- **Definición de cada KPI:** [kpis.md](../modelos/kpis.md).
+
+## Autenticación
+
+1. `POST /api/auth/login` con `{"usuario": "...", "password": "..."}`.
+2. La respuesta deja una cookie de sesión `faro_sesion`: JWT, **httpOnly**, `SameSite=Lax`,
+   `Secure` en producción. Dura 8 horas.
+3. Las demás rutas exigen la sesión (`401` si falta, expiró o fue alterada).
+4. Tras **5 intentos fallidos** la cuenta se bloquea 15 minutos (`423`).
+5. El mensaje es el mismo exista o no el usuario.
+
+## Endpoints
+
+| Método | Ruta | Para qué | Sesión |
+|---|---|---|:---:|
+| GET | `/api/salud` | La API y la base responden | — |
+| POST | `/api/auth/login` · `/api/auth/logout` | Abrir o cerrar sesión | — |
+| GET | `/api/auth/me` | Usuario de la sesión | ✔ |
+| GET | `/api/kpis` | 8 KPI del período, comparados con el mismo período del año anterior | ✔ |
+| GET | `/api/tendencia?granularidad=mes\|semana\|dia` | Serie histórica con la del año anterior | ✔ |
+| GET | `/api/desglose?dimension=…&top=N&pertenencia=` | Ventas por grupo, categoría, grupo de compra, territorio, estado, vendedor, producto o cliente | ✔ |
+| GET | `/api/facturas?pagina&tamano&orden&buscar` | Detalle paginado (máximo 100 por página) | ✔ |
+| GET | `/api/facturas/{id}` | Navegación a una factura y sus líneas | ✔ |
+| GET | `/api/opciones` | Valores para los filtros | ✔ |
+| GET | `/api/estado` | Fecha de la última carga exitosa y rango de datos | ✔ |
+
+**Filtros comunes** (parámetros de consulta, todos opcionales):
+- `desde`, `hasta`;
+- `territorio`, `estado`, `categoria`, `grupo`;
+- `vendedor_id`, `cliente_id`, `producto_id`;
+- `solo_bajo_costo`, `incluir_simulados`.
+
+## Errores
+
+| Código | Cuándo |
+|---|---|
+| 401 | Falta la sesión, expiró o es inválida; o credenciales incorrectas |
+| 404 | La factura no existe |
+| 422 | Parámetro inválido (fecha, rango, dimensión, página > 100) |
+| 423 | Cuenta bloqueada por intentos fallidos |
+| 503 | La base no está disponible (p. ej. Neon despertando): reintentar |
+| 504 | La consulta superó el tiempo máximo (8 s) |
+
+Los errores nunca incluyen detalles internos (consultas, cadenas de conexión o trazas).
+
+## Seguridad aplicada
+- Consultas **parametrizadas**; columnas de listas fijas; sin SQL dinámico con datos del usuario.
+- El rol de base `faro_api` solo lee las vistas `api.*`: no ve el DW, el staging ni la auditoría,
+  y no puede cambiar contraseñas ni roles.
+- Transacciones de **solo lectura** con un tiempo máximo por consulta.
+- Cabeceras `X-Content-Type-Options`, `X-Frame-Options` y `Referrer-Policy`, y `Cache-Control: no-store` en los datos.
+
+## Tiempos de respuesta
+Medidos con los datos completos: [tiempos-api-local.md](../pruebas/tiempos-api-local.md).

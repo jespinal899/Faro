@@ -1,0 +1,2087 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Faro API",
+    "description": "API del dashboard de Faro. Todos los indicadores provienen del Data Warehouse (vistas aprobadas del esquema `api`). Requiere iniciar sesión.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/salud": {
+      "get": {
+        "tags": [
+          "Operación"
+        ],
+        "summary": "Estado de la API y de la base de datos",
+        "description": "Pública (sin sesión): sirve para monitorear que el servicio responde.",
+        "operationId": "salud_api_salud_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Salud Api Salud Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Iniciar sesión",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Credenciales"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Cerrar sesión",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Usuario de la sesión actual",
+        "operationId": "me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Usuario"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kpis": {
+      "get": {
+        "tags": [
+          "Datos del dashboard"
+        ],
+        "summary": "Indicadores principales",
+        "description": "KPI del período filtrado. Si se indica `desde` y `hasta`, se comparan con el mismo\nperíodo del año anterior.",
+        "operationId": "kpis_api_kpis_get",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Desde"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hasta"
+            }
+          },
+          {
+            "name": "territorio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Territorio"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Categoria"
+            }
+          },
+          {
+            "name": "grupo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grupo"
+            }
+          },
+          {
+            "name": "vendedor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Vendedor Id"
+            }
+          },
+          {
+            "name": "cliente_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cliente Id"
+            }
+          },
+          {
+            "name": "producto_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Producto Id"
+            }
+          },
+          {
+            "name": "solo_bajo_costo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Solo Bajo Costo"
+            }
+          },
+          {
+            "name": "incluir_simulados",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Incluir Simulados"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaKpis"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tendencia": {
+      "get": {
+        "tags": [
+          "Datos del dashboard"
+        ],
+        "summary": "Tendencia histórica",
+        "description": "Ventas netas, utilidad y facturas por período, con las ventas del período equivalente\ndel año anterior para comparar.",
+        "operationId": "tendencia_api_tendencia_get",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Desde"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hasta"
+            }
+          },
+          {
+            "name": "territorio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Territorio"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Categoria"
+            }
+          },
+          {
+            "name": "grupo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grupo"
+            }
+          },
+          {
+            "name": "vendedor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Vendedor Id"
+            }
+          },
+          {
+            "name": "cliente_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cliente Id"
+            }
+          },
+          {
+            "name": "producto_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Producto Id"
+            }
+          },
+          {
+            "name": "solo_bajo_costo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Solo Bajo Costo"
+            }
+          },
+          {
+            "name": "incluir_simulados",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Incluir Simulados"
+            }
+          },
+          {
+            "name": "granularidad",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "mes",
+                "semana",
+                "dia"
+              ],
+              "type": "string",
+              "default": "mes",
+              "title": "Granularidad"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PuntoTendencia"
+                  },
+                  "title": "Response Tendencia Api Tendencia Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/desglose": {
+      "get": {
+        "tags": [
+          "Datos del dashboard"
+        ],
+        "summary": "Ventas por dimensión",
+        "description": "Ventas por grupo, categoría, territorio, vendedor, producto o cliente.\n\nCon `pertenencia=true` (solo para grupos) cada venta se reparte entre todos los grupos\ndel producto con su factor de ponderación: la suma sigue siendo el total (no se duplica).\nLas filas que no entran en el top se agrupan en \"Otros\".",
+        "operationId": "desglose_api_desglose_get",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Desde"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hasta"
+            }
+          },
+          {
+            "name": "territorio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Territorio"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Categoria"
+            }
+          },
+          {
+            "name": "grupo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grupo"
+            }
+          },
+          {
+            "name": "vendedor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Vendedor Id"
+            }
+          },
+          {
+            "name": "cliente_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cliente Id"
+            }
+          },
+          {
+            "name": "producto_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Producto Id"
+            }
+          },
+          {
+            "name": "solo_bajo_costo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Solo Bajo Costo"
+            }
+          },
+          {
+            "name": "incluir_simulados",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Incluir Simulados"
+            }
+          },
+          {
+            "name": "dimension",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "grupo",
+                "categoria",
+                "grupo_compra",
+                "territorio",
+                "estado",
+                "vendedor",
+                "producto",
+                "cliente"
+              ],
+              "type": "string",
+              "default": "grupo",
+              "title": "Dimension"
+            }
+          },
+          {
+            "name": "top",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 10,
+              "title": "Top"
+            }
+          },
+          {
+            "name": "pertenencia",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Pertenencia"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaDesglose"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/facturas": {
+      "get": {
+        "tags": [
+          "Datos del dashboard"
+        ],
+        "summary": "Detalle de facturas (paginado)",
+        "description": "Facturas del período filtrado, de a `tamano` por página (máximo 100).\n`buscar` filtra por nombre de cliente.",
+        "operationId": "facturas_api_facturas_get",
+        "parameters": [
+          {
+            "name": "desde",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Desde"
+            }
+          },
+          {
+            "name": "hasta",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hasta"
+            }
+          },
+          {
+            "name": "territorio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Territorio"
+            }
+          },
+          {
+            "name": "estado",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Estado"
+            }
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Categoria"
+            }
+          },
+          {
+            "name": "grupo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Grupo"
+            }
+          },
+          {
+            "name": "vendedor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Vendedor Id"
+            }
+          },
+          {
+            "name": "cliente_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cliente Id"
+            }
+          },
+          {
+            "name": "producto_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Producto Id"
+            }
+          },
+          {
+            "name": "solo_bajo_costo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Solo Bajo Costo"
+            }
+          },
+          {
+            "name": "incluir_simulados",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Incluir Simulados"
+            }
+          },
+          {
+            "name": "pagina",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10000,
+              "minimum": 1,
+              "default": 1,
+              "title": "Pagina"
+            }
+          },
+          {
+            "name": "tamano",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Tamano"
+            }
+          },
+          {
+            "name": "orden",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "fecha_desc",
+                "fecha_asc",
+                "venta_desc",
+                "venta_asc"
+              ],
+              "type": "string",
+              "default": "fecha_desc",
+              "title": "Orden"
+            }
+          },
+          {
+            "name": "buscar",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 60
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Buscar"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginaFacturas"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/facturas/{factura_id}": {
+      "get": {
+        "tags": [
+          "Datos del dashboard"
+        ],
+        "summary": "Detalle de una factura",
+        "description": "Navegación de resumen a detalle (drill-down): la factura con sus líneas.",
+        "operationId": "factura_api_facturas__factura_id__get",
+        "parameters": [
+          {
+            "name": "factura_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Factura Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Factura"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/opciones": {
+      "get": {
+        "tags": [
+          "Datos del dashboard"
+        ],
+        "summary": "Valores para los filtros",
+        "operationId": "opciones_api_opciones_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Opciones"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/estado": {
+      "get": {
+        "tags": [
+          "Datos del dashboard"
+        ],
+        "summary": "Frescura de los datos",
+        "description": "Fecha y hora de la última carga exitosa y rango de datos disponibles.",
+        "operationId": "estado_api_estado_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EstadoDatos"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Comparacion": {
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "const": "anio_anterior",
+            "title": "Tipo"
+          },
+          "desde": {
+            "type": "string",
+            "format": "date",
+            "title": "Desde"
+          },
+          "hasta": {
+            "type": "string",
+            "format": "date",
+            "title": "Hasta"
+          },
+          "valores": {
+            "$ref": "#/components/schemas/Indicadores"
+          },
+          "variacion_pct": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Variacion Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tipo",
+          "desde",
+          "hasta",
+          "valores",
+          "variacion_pct"
+        ],
+        "title": "Comparacion"
+      },
+      "Credenciales": {
+        "properties": {
+          "usuario": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 3,
+            "title": "Usuario"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "usuario",
+          "password"
+        ],
+        "title": "Credenciales"
+      },
+      "EstadoDatos": {
+        "properties": {
+          "ultima_carga_exitosa": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultima Carga Exitosa"
+          },
+          "estado_ultima_ejecucion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado Ultima Ejecucion"
+          },
+          "fecha_desde": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Desde"
+          },
+          "fecha_hasta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Hasta"
+          },
+          "ultima_fecha_real": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ultima Fecha Real"
+          },
+          "lineas": {
+            "type": "integer",
+            "title": "Lineas"
+          },
+          "lineas_simuladas": {
+            "type": "integer",
+            "title": "Lineas Simuladas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ultima_carga_exitosa",
+          "estado_ultima_ejecucion",
+          "fecha_desde",
+          "fecha_hasta",
+          "ultima_fecha_real",
+          "lineas",
+          "lineas_simuladas"
+        ],
+        "title": "EstadoDatos"
+      },
+      "Factura": {
+        "properties": {
+          "factura_id": {
+            "type": "integer",
+            "title": "Factura Id"
+          },
+          "pedido_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pedido Id"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha"
+          },
+          "cliente_id": {
+            "type": "integer",
+            "title": "Cliente Id"
+          },
+          "cliente": {
+            "type": "string",
+            "title": "Cliente"
+          },
+          "categoria_cliente": {
+            "type": "string",
+            "title": "Categoria Cliente"
+          },
+          "grupo_compra": {
+            "type": "string",
+            "title": "Grupo Compra"
+          },
+          "vendedor": {
+            "type": "string",
+            "title": "Vendedor"
+          },
+          "ciudad": {
+            "type": "string",
+            "title": "Ciudad"
+          },
+          "estado": {
+            "type": "string",
+            "title": "Estado"
+          },
+          "territorio": {
+            "type": "string",
+            "title": "Territorio"
+          },
+          "es_simulado": {
+            "type": "boolean",
+            "title": "Es Simulado"
+          },
+          "ventas_netas": {
+            "type": "number",
+            "title": "Ventas Netas"
+          },
+          "utilidad": {
+            "type": "number",
+            "title": "Utilidad"
+          },
+          "lineas": {
+            "items": {
+              "$ref": "#/components/schemas/LineaFactura"
+            },
+            "type": "array",
+            "title": "Lineas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "factura_id",
+          "pedido_id",
+          "fecha",
+          "cliente_id",
+          "cliente",
+          "categoria_cliente",
+          "grupo_compra",
+          "vendedor",
+          "ciudad",
+          "estado",
+          "territorio",
+          "es_simulado",
+          "ventas_netas",
+          "utilidad",
+          "lineas"
+        ],
+        "title": "Factura"
+      },
+      "FilaDesglose": {
+        "properties": {
+          "clave": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clave"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "ventas_netas": {
+            "type": "number",
+            "title": "Ventas Netas"
+          },
+          "utilidad": {
+            "type": "number",
+            "title": "Utilidad"
+          },
+          "margen_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margen Pct"
+          },
+          "unidades": {
+            "type": "number",
+            "title": "Unidades"
+          },
+          "facturas": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facturas"
+          },
+          "participacion_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participacion Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clave",
+          "nombre",
+          "ventas_netas",
+          "utilidad",
+          "margen_pct",
+          "unidades",
+          "facturas",
+          "participacion_pct"
+        ],
+        "title": "FilaDesglose"
+      },
+      "FilaFactura": {
+        "properties": {
+          "factura_id": {
+            "type": "integer",
+            "title": "Factura Id"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date",
+            "title": "Fecha"
+          },
+          "cliente": {
+            "type": "string",
+            "title": "Cliente"
+          },
+          "vendedor": {
+            "type": "string",
+            "title": "Vendedor"
+          },
+          "territorio": {
+            "type": "string",
+            "title": "Territorio"
+          },
+          "lineas": {
+            "type": "integer",
+            "title": "Lineas"
+          },
+          "unidades": {
+            "type": "integer",
+            "title": "Unidades"
+          },
+          "ventas_netas": {
+            "type": "number",
+            "title": "Ventas Netas"
+          },
+          "utilidad": {
+            "type": "number",
+            "title": "Utilidad"
+          },
+          "es_simulado": {
+            "type": "boolean",
+            "title": "Es Simulado"
+          },
+          "tiene_venta_bajo_costo": {
+            "type": "boolean",
+            "title": "Tiene Venta Bajo Costo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "factura_id",
+          "fecha",
+          "cliente",
+          "vendedor",
+          "territorio",
+          "lineas",
+          "unidades",
+          "ventas_netas",
+          "utilidad",
+          "es_simulado",
+          "tiene_venta_bajo_costo"
+        ],
+        "title": "FilaFactura"
+      },
+      "Filtros": {
+        "properties": {
+          "desde": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Desde"
+          },
+          "hasta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hasta"
+          },
+          "territorio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Territorio"
+          },
+          "estado": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estado"
+          },
+          "categoria": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoria"
+          },
+          "grupo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grupo"
+          },
+          "vendedor_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendedor Id"
+          },
+          "cliente_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cliente Id"
+          },
+          "producto_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Producto Id"
+          },
+          "solo_bajo_costo": {
+            "type": "boolean",
+            "title": "Solo Bajo Costo",
+            "default": false
+          },
+          "incluir_simulados": {
+            "type": "boolean",
+            "title": "Incluir Simulados",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "Filtros",
+        "description": "Filtros comunes a todos los indicadores. Todos son opcionales."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Indicadores": {
+        "properties": {
+          "ventas_netas": {
+            "type": "number",
+            "title": "Ventas Netas"
+          },
+          "ventas_brutas": {
+            "type": "number",
+            "title": "Ventas Brutas"
+          },
+          "utilidad": {
+            "type": "number",
+            "title": "Utilidad"
+          },
+          "margen_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margen Pct"
+          },
+          "unidades": {
+            "type": "integer",
+            "title": "Unidades"
+          },
+          "facturas": {
+            "type": "integer",
+            "title": "Facturas"
+          },
+          "ticket_promedio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Promedio"
+          },
+          "clientes_activos": {
+            "type": "integer",
+            "title": "Clientes Activos"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ventas_netas",
+          "ventas_brutas",
+          "utilidad",
+          "margen_pct",
+          "unidades",
+          "facturas",
+          "ticket_promedio",
+          "clientes_activos"
+        ],
+        "title": "Indicadores"
+      },
+      "LineaFactura": {
+        "properties": {
+          "linea_factura_id": {
+            "type": "integer",
+            "title": "Linea Factura Id"
+          },
+          "producto_id": {
+            "type": "integer",
+            "title": "Producto Id"
+          },
+          "producto": {
+            "type": "string",
+            "title": "Producto"
+          },
+          "grupo_principal": {
+            "type": "string",
+            "title": "Grupo Principal"
+          },
+          "cantidad": {
+            "type": "integer",
+            "title": "Cantidad"
+          },
+          "precio_unitario": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precio Unitario"
+          },
+          "venta_bruta": {
+            "type": "number",
+            "title": "Venta Bruta"
+          },
+          "impuesto": {
+            "type": "number",
+            "title": "Impuesto"
+          },
+          "venta_neta": {
+            "type": "number",
+            "title": "Venta Neta"
+          },
+          "utilidad": {
+            "type": "number",
+            "title": "Utilidad"
+          },
+          "es_venta_bajo_costo": {
+            "type": "boolean",
+            "title": "Es Venta Bajo Costo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "linea_factura_id",
+          "producto_id",
+          "producto",
+          "grupo_principal",
+          "cantidad",
+          "precio_unitario",
+          "venta_bruta",
+          "impuesto",
+          "venta_neta",
+          "utilidad",
+          "es_venta_bajo_costo"
+        ],
+        "title": "LineaFactura"
+      },
+      "Opcion": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "nombre"
+        ],
+        "title": "Opcion"
+      },
+      "Opciones": {
+        "properties": {
+          "territorios": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Territorios"
+          },
+          "estados": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Estados"
+          },
+          "categorias": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Categorias"
+          },
+          "grupos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Grupos"
+          },
+          "vendedores": {
+            "items": {
+              "$ref": "#/components/schemas/Opcion"
+            },
+            "type": "array",
+            "title": "Vendedores"
+          },
+          "fecha_desde": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Desde"
+          },
+          "fecha_hasta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Hasta"
+          }
+        },
+        "type": "object",
+        "required": [
+          "territorios",
+          "estados",
+          "categorias",
+          "grupos",
+          "vendedores",
+          "fecha_desde",
+          "fecha_hasta"
+        ],
+        "title": "Opciones"
+      },
+      "PaginaFacturas": {
+        "properties": {
+          "pagina": {
+            "type": "integer",
+            "title": "Pagina"
+          },
+          "tamano": {
+            "type": "integer",
+            "title": "Tamano"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "filas": {
+            "items": {
+              "$ref": "#/components/schemas/FilaFactura"
+            },
+            "type": "array",
+            "title": "Filas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pagina",
+          "tamano",
+          "total",
+          "filas"
+        ],
+        "title": "PaginaFacturas"
+      },
+      "PuntoTendencia": {
+        "properties": {
+          "periodo": {
+            "type": "string",
+            "format": "date",
+            "title": "Periodo"
+          },
+          "ventas_netas": {
+            "type": "number",
+            "title": "Ventas Netas"
+          },
+          "utilidad": {
+            "type": "number",
+            "title": "Utilidad"
+          },
+          "facturas": {
+            "type": "integer",
+            "title": "Facturas"
+          },
+          "ventas_netas_anterior": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ventas Netas Anterior"
+          }
+        },
+        "type": "object",
+        "required": [
+          "periodo",
+          "ventas_netas",
+          "utilidad",
+          "facturas",
+          "ventas_netas_anterior"
+        ],
+        "title": "PuntoTendencia"
+      },
+      "RespuestaDesglose": {
+        "properties": {
+          "dimension": {
+            "type": "string",
+            "title": "Dimension"
+          },
+          "pertenencia": {
+            "type": "boolean",
+            "title": "Pertenencia"
+          },
+          "total_ventas_netas": {
+            "type": "number",
+            "title": "Total Ventas Netas"
+          },
+          "filas": {
+            "items": {
+              "$ref": "#/components/schemas/FilaDesglose"
+            },
+            "type": "array",
+            "title": "Filas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dimension",
+          "pertenencia",
+          "total_ventas_netas",
+          "filas"
+        ],
+        "title": "RespuestaDesglose"
+      },
+      "RespuestaKpis": {
+        "properties": {
+          "filtros": {
+            "$ref": "#/components/schemas/Filtros"
+          },
+          "actual": {
+            "$ref": "#/components/schemas/Indicadores"
+          },
+          "comparacion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Comparacion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "filtros",
+          "actual",
+          "comparacion"
+        ],
+        "title": "RespuestaKpis"
+      },
+      "Usuario": {
+        "properties": {
+          "usuario": {
+            "type": "string",
+            "title": "Usuario"
+          },
+          "nombre": {
+            "type": "string",
+            "title": "Nombre"
+          },
+          "rol": {
+            "type": "string",
+            "title": "Rol"
+          }
+        },
+        "type": "object",
+        "required": [
+          "usuario",
+          "nombre",
+          "rol"
+        ],
+        "title": "Usuario"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

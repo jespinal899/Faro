@@ -2,7 +2,7 @@
 
 Por cada pregunta registra: resultado esperado, consulta o métrica que lo respalda, respuesta
 obtenida y afirmaciones no verificadas (cifras de hechos o predicciones que no aparecen en
-ninguna consulta hecha). Llama al modelo de verdad: cuesta unos centavos de dólar.
+ninguna consulta hecha). Llama al modelo de verdad (con Groq, en su plan gratuito).
 
     uv run python generative-ai/evaluar_asistente.py           # API en proceso + base local
     uv run python generative-ai/evaluar_asistente.py --neon    # API en proceso + Neon
@@ -92,7 +92,11 @@ def evaluar(caso: Caso, respuesta: dict, esperado) -> dict:
     faltan = [
         nombre
         for nombre, valor, unidad in esperado.cifras
-        if not any(_coincide(v, unidad == "%" or p, valor) for v, p in encontrados)
+        if not any(
+            _coincide(v, unidad == "%" or p, objetivo)
+            for v, p in encontrados
+            for objetivo in (valor if isinstance(valor, list) else [valor])
+        )
     ]
     faltan += [n for n in esperado.nombres if n.lower() not in texto.lower()]
     afirma_cifras = any(
@@ -118,11 +122,14 @@ def evaluar(caso: Caso, respuesta: dict, esperado) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Evalúa el asistente de IA")
     parser.add_argument("--neon", action="store_true", help="usar Neon (producción)")
+    parser.add_argument(
+        "--pausa",
+        type=float,
+        default=20.0,
+        help="segundos entre preguntas (el plan gratuito de Groq limita los tokens por minuto)",
+    )
     args = parser.parse_args()
     load_dotenv(RAIZ / ".env")
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        print("Falta ANTHROPIC_API_KEY en .env")
-        return 1
 
     if args.neon:
         os.environ["API_DATABASE_URL"] = os.environ["NEON_API_ANALYTICS_URL"]
@@ -149,7 +156,9 @@ def main() -> int:
         if login.status_code != 200:
             print("No se pudo iniciar sesión como demo:", login.status_code)
             return 1
-        for caso in CASOS:
+        for i, caso in enumerate(CASOS):
+            if i:
+                time.sleep(args.pausa)
             esperado = caso.esperado(dw)
             inicio = time.monotonic()
             r = api.post("/api/asistente", json={"pregunta": caso.pregunta})
@@ -214,7 +223,12 @@ def reporte(filas, entorno: str) -> str:
             f"- **Esperado:** {esp.descripcion}."
             + (
                 " Cifras: "
-                + "; ".join(f"{n} = {v:,.2f}{' %' if u == '%' else ''}" for n, v, u in esp.cifras)
+                + "; ".join(
+                    f"{n} = "
+                    + " o ".join(f"{x:,.2f}" for x in (v if isinstance(v, list) else [v]))
+                    + (" %" if u == "%" else "")
+                    for n, v, u in esp.cifras
+                )
                 if esp.cifras
                 else ""
             ),

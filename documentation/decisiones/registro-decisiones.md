@@ -416,7 +416,7 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
   - **Consecuencias, medidas en la cuenta:**
     - 1,000 solicitudes por día y **8,000 tokens por minuto**: 1 o 2 preguntas por minuto.
     - Groq no permite JSON junto con herramientas, así que la respuesta final llega por la
-      herramienta `responder`.
+      herramienta `json` (gpt-oss entrega su JSON con una herramienta de ese nombre).
     - Groq no retiene datos de inferencia por defecto.
     - La seguridad, las herramientas, la verificación de citas y las pruebas no cambian.
 

@@ -15,7 +15,8 @@ from dataclasses import dataclass, field
 class Esperado:
     descripcion: str  # lo que la respuesta debe decir, en palabras
     respaldo: str  # la métrica o consulta que lo respalda
-    cifras: list[tuple[str, float, str]] = field(default_factory=list)  # (nombre, valor, unidad)
+    # (nombre, valor o lista de valores aceptables, unidad)
+    cifras: list[tuple[str, float | list[float], str]] = field(default_factory=list)
     nombres: list[str] = field(default_factory=list)  # deben aparecer en la respuesta
 
 
@@ -165,17 +166,19 @@ def _p07(conn) -> Esperado:
 
 
 def _p08(conn) -> Esperado:
-    valor = _uno(
+    # La pregunta es por "las próximas semanas": vale el total de las 4 o la primera semana
+    semana1, total = _uno(
         conn,
-        "SELECT p.venta_neta_pronosticada FROM ml.pronostico p "
-        "JOIN ml.modelo m ON m.modelo_id = p.modelo_id AND m.es_vigente "
-        "WHERE p.grupo = 'Packaging Materials' AND p.horizonte = 1 "
-        "ORDER BY p.origen DESC LIMIT 1",
-    )[0]
+        "SELECT sum(p.venta_neta_pronosticada) FILTER (WHERE p.horizonte = 1), "
+        "       sum(p.venta_neta_pronosticada) "
+        "FROM ml.pronostico p JOIN ml.modelo m ON m.modelo_id = p.modelo_id AND m.es_vigente "
+        "WHERE p.grupo = 'Packaging Materials' "
+        "  AND p.origen = (SELECT max(origen) FROM ml.pronostico WHERE modelo_id = p.modelo_id)",
+    )
     return Esperado(
         "PREDICCIÓN de Packaging Materials (4 semanas) con su rango, identificada como predicción",
-        "ml.pronostico del modelo vigente (semana 1)",
-        [("pronóstico semana 1", float(valor), "USD")],
+        "ml.pronostico del modelo vigente (total de 4 semanas o semana 1)",
+        [("pronóstico (total o semana 1)", [float(total), float(semana1)], "USD")],
         ["Packaging Materials"],
     )
 

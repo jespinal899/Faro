@@ -68,11 +68,12 @@ porcentajes con un decimal (8.1 %).
 """
 
 # Las APIs compatibles con OpenAI (Groq) no permiten pedir JSON en la misma llamada que las
-# herramientas. La respuesta final se entrega llamando a una herramienta más, "responder",
-# cuyos parámetros son el formato de respuesta (patrón habitual; gpt-oss, si se le pide JSON
-# en texto, intenta llamar a una herramienta "json" inexistente). Si aun así llega texto, se
-# lee el JSON del texto o se pide el formato en una llamada final sin herramientas.
-RESPONDER = "responder"
+# herramientas. La respuesta final se entrega llamando a una herramienta más, cuyos parámetros
+# son el formato de respuesta. Se llama "json" porque gpt-oss, por su formato de salida,
+# entrega el JSON llamando a una herramienta con ese nombre (comprobado: con otro nombre la
+# llamada fallaba). Si aun así llega texto, se lee el JSON del texto o se pide el formato en
+# una llamada final sin herramientas.
+RESPONDER = "json"
 INSTRUCCION_JSON = f"""
 Respuesta final: cuando ya no necesites consultar datos, entrega la respuesta llamando a la \
 herramienta `{RESPONDER}` (no respondas con texto libre). Cada hecho y cada predicción llevan \

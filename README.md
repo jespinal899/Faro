@@ -34,8 +34,8 @@ Las decisiones técnicas y su justificación están en
 | 1. Descubrimiento | Cargar la fuente (local y Neon), ERD, diccionario, perfilado, preguntas analíticas, CD | ✅ Completa |
 | 2. Diseño | Arquitectura, staging, grano, dimensiones | ✅ Completa |
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena, zona ready, roles, simulador y ejecución horaria | ✅ Completa |
-| 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ⏳ Siguiente |
-| 5. BI | API y dashboard | — |
+| 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ✅ Completa |
+| 5. BI | API y dashboard | ⏳ Siguiente |
 | 6. ML y GenAI | Modelo predictivo y asistente | — |
 | 7. Automatización | Alertas y monitoreo | — |
 | 8. Integración | Pruebas end-to-end, despliegue, video | — |
@@ -131,16 +131,16 @@ uv run python database/scripts/perfilar_fuente.py     # perfil y 32 reglas de ca
 | [Perfil de datos](documentation/pruebas/perfil-fuente.md) | Reglas de calidad, distribuciones y perfil por columna |
 | Reconciliación de la carga ([local](documentation/pruebas/reconciliacion-carga-fuente-local.md) · [Neon](documentation/pruebas/reconciliacion-carga-fuente-neon.md)) | Conteos y sumas de control origen vs destino |
 
-## ETL de staging (fuente → raw → clean / cuarentena)
+## ETL de ventas (fuente → staging → Data Warehouse)
 
 ```powershell
-# Una sola vez: crear los esquemas de staging y auditoría en la base analítica local
-Get-ChildItem database/staging/*.sql | Sort-Object Name | ForEach-Object {
+# Una sola vez: crear staging, auditoría y Data Warehouse en la base analítica local
+Get-ChildItem database/staging/*.sql, database/data-warehouse/*.sql | ForEach-Object {
   Get-Content $_ -Raw | docker exec -i faro-postgres psql -U admin -d faro_analytics -v ON_ERROR_STOP=1 -q
 }
 
 uv run python -m etl.orchestration.pipeline                 # incremental (solo cambios)
-uv run python -m etl.orchestration.pipeline --modo inicial  # vacía staging y recarga todo
+uv run python -m etl.orchestration.pipeline --modo inicial  # vacía staging y DW y recarga todo
 ```
 
 - Cada ejecución es **todo o nada**: si falla se revierte, el watermark no avanza y queda
@@ -158,6 +158,36 @@ uv run python -m etl.orchestration.pipeline --modo inicial  # vacía staging y r
 SELECT execution_id, mode, status, rows_read, rows_inserted, rows_updated, rows_rejected, reconciled
 FROM audit.etl_execution ORDER BY execution_id DESC LIMIT 5;
 ```
+
+## Data Warehouse (esquema estrella `dw`)
+
+El mismo pipeline carga el DW en la misma transacción que el staging. Grano de
+`dw.fact_ventas`: **una fila por línea de factura**. Dimensiones: fecha (rol doble), cliente y
+producto con historia (SCD2), empleado, geografía y grupo de producto, más el puente
+producto-grupo.
+
+```powershell
+uv run python database/scripts/validar_dw.py     # 11 controles de reconciliación y modelo
+uv run python database/scripts/documentar_dw.py  # regenera el diccionario de datos del DW
+```
+
+```sql
+-- Ventas netas y margen por año y grupo principal (el margen se recalcula, no se suma)
+SELECT d.anio, p.grupo_principal,
+       sum(f.venta_neta) AS venta_neta,
+       round(100 * sum(f.utilidad) / sum(f.venta_neta), 2) AS margen_pct
+FROM dw.fact_ventas f
+JOIN dw.dim_fecha d    ON d.fecha_key = f.fecha_factura_key
+JOIN dw.dim_producto p ON p.producto_key = f.producto_key
+GROUP BY 1, 2 ORDER BY 1, 3 DESC;
+```
+
+| Documento | Contenido |
+|---|---|
+| [Modelo dimensional](documentation/modelos/modelo-dimensional.md) | Grano, esquema estrella, medidas, SCD y productos en varios grupos |
+| [Diccionario del DW](documentation/modelos/diccionario-dw.md) | Tablas, columnas, claves y descripciones (generado desde la base) |
+| [Pruebas del DW](documentation/pruebas/pruebas-dw.md) | Pruebas automáticas y controles de validación |
+| Validación ([local](documentation/pruebas/validacion-dw-local.md) · [Neon](documentation/pruebas/validacion-dw-neon.md)) | Resultado de los 11 controles y ventas por año |
 
 ## Simulador de ventas (datos SIMULADOS)
 

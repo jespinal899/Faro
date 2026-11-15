@@ -2,7 +2,7 @@
 -- Faro · Seguridad · Roles de mínimo privilegio en la base ANALÍTICA (faro_analytics)
 -- IDEMPOTENTE. Lo ejecuta el dueño de la base (despliegue), nunca la aplicación.
 --
---   faro_etl : lo usa el pipeline. Lee y escribe DATOS en staging y auditoría, pero no
+--   faro_etl : lo usa el pipeline. Lee y escribe DATOS en staging, auditoría y DW, pero no
 --              puede crear, alterar ni borrar tablas (la estructura solo cambia por el CD).
 --
 -- Los roles de la API (faro_api) y del asistente de IA (faro_ia) se agregan con sus fases.
@@ -28,3 +28,8 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA audit, stg_raw, stg_clean, stg_quarantine
 -- La zona ready es de solo lectura para el pipeline
 GRANT SELECT ON ALL TABLES IN SCHEMA stg_ready TO faro_etl;
 ALTER DEFAULT PRIVILEGES IN SCHEMA stg_ready GRANT SELECT ON TABLES TO faro_etl;
+
+-- El pipeline carga el Data Warehouse: datos sí, estructura no
+GRANT USAGE ON SCHEMA dw TO faro_etl;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA dw TO faro_etl;
+ALTER DEFAULT PRIVILEGES IN SCHEMA dw GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO faro_etl;

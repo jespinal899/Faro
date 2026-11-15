@@ -33,7 +33,7 @@ Las decisiones técnicas y su justificación están en
 | 0. Entorno | Python, Docker, PostgreSQL local, repositorio, CI | ✅ Completa |
 | 1. Descubrimiento | Cargar la fuente (local y Neon), ERD, diccionario, perfilado, preguntas analíticas, CD | ✅ Completa |
 | 2. Diseño | Arquitectura, staging, grano, dimensiones | ✅ Completa |
-| 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena | ⏳ Siguiente |
+| 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena | 🔄 En curso (staging listo; faltan zona ready, roles y simulador) |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | — |
 | 5. BI | API y dashboard | — |
 | 6. ML y GenAI | Modelo predictivo y asistente | — |
@@ -130,6 +130,32 @@ uv run python database/scripts/perfilar_fuente.py     # perfil y 32 reglas de ca
 | [Diagrama entidad-relación](documentation/modelos/erd-fuente.md) | Diagrama Mermaid (visible en GitHub) |
 | [Perfil de datos](documentation/pruebas/perfil-fuente.md) | Reglas de calidad, distribuciones y perfil por columna |
 | Reconciliación de la carga ([local](documentation/pruebas/reconciliacion-carga-fuente-local.md) · [Neon](documentation/pruebas/reconciliacion-carga-fuente-neon.md)) | Conteos y sumas de control origen vs destino |
+
+## ETL de staging (fuente → raw → clean / cuarentena)
+
+```powershell
+# Una sola vez: crear los esquemas de staging y auditoría en la base analítica local
+Get-ChildItem database/staging/*.sql | Sort-Object Name | ForEach-Object {
+  Get-Content $_ -Raw | docker exec -i faro-postgres psql -U admin -d faro_analytics -v ON_ERROR_STOP=1 -q
+}
+
+uv run python -m etl.orchestration.pipeline                 # incremental (solo cambios)
+uv run python -m etl.orchestration.pipeline --modo inicial  # vacía staging y recarga todo
+```
+
+- Cada ejecución es **todo o nada**: si falla se revierte, el watermark no avanza y queda
+  registrada en `audit.etl_execution` con el error. Volver a ejecutar la recupera.
+- Repetir una ejecución **no duplica** datos.
+- Las reglas de calidad están en [etl/config.py](etl/config.py); los rechazados van a
+  `stg_quarantine.registro_rechazado` con la regla que falló.
+- En producción se lanza desde *Actions → ETL - Ventas → Run workflow*.
+- Evidencia de pruebas: [pruebas-etl-staging.md](documentation/pruebas/pruebas-etl-staging.md).
+
+```sql
+-- Últimas ejecuciones y su resultado
+SELECT execution_id, mode, status, rows_read, rows_inserted, rows_updated, rows_rejected, reconciled
+FROM audit.etl_execution ORDER BY execution_id DESC LIMIT 5;
+```
 
 ## Calidad y pruebas (lo mismo que ejecuta el CI)
 

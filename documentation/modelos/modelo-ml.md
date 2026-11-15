@@ -162,7 +162,8 @@ Detalle por pliegue, horizonte y grupo: [evaluación local](../pruebas/evaluacio
   - la vista `api.pronostico_vs_real` compara cada pronóstico con lo vendido cuando la semana se
     completa, e indica si esa venta incluye ventas simuladas;
   - las alertas de la Fase 7 usarán el pronóstico (P13: grupo por debajo de un umbral).
-- **Exposición:** vistas aprobadas `api.*` → API → dashboard, siempre identificado como
+- **Exposición:** vistas aprobadas `api.*` → API (`/api/pronostico` y `/api/pronostico/evaluacion`) →
+  pestaña *Pronóstico* del dashboard ([captura](../capturas/07-pronostico.png)), siempre identificado como
   **PREDICCIÓN** y no como dato histórico.
 
 ## 9. Cómo ejecutarlo

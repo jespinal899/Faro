@@ -46,7 +46,10 @@ def test_auditoria_registra_ejecucion_pasos_y_watermarks(bases):
     )[0]
     assert (estado, leidas, reconciliada) == ("exitoso", 19, True)
     pasos = dict(sql(analitica, "SELECT step, count(*) FROM audit.etl_step GROUP BY 1"))
-    assert pasos == {"extract": 17, "clean": 17, "reconcile": 17}
+    assert pasos == {
+        "extract": 17, "clean": 17, "reconcile": 17,
+        "load_dim": 6, "load_fact": 1, "reconcile_dw": 1,
+    }  # fmt: skip
     assert uno(analitica, "SELECT count(*) FROM audit.watermark") == 17
     assert uno(analitica, "SELECT count(*) FROM audit.dq_rule") >= 17
 

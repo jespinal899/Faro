@@ -1,0 +1,70 @@
+# Pipeline de staging de ventas en producción (Neon).
+#
+# Ejecuta: fuente (wwi_oltp) -> stg_raw -> stg_clean / cuarentena, con auditoría.
+# El runner arranca, carga y se apaga: no hay servidor encendido (ver decisión D-13).
+#
+# Por ahora se lanza a mano (Actions -> ETL - Ventas -> Run workflow).
+# La programación horaria se activa junto con el simulador de ventas.
+
+name: ETL - Ventas
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "incremental = solo cambios · inicial = vacía staging y recarga todo"
+        type: choice
+        options: [incremental, inicial]
+        default: incremental
+
+# Nunca dos ejecuciones a la vez (además del candado en la base)
+concurrency:
+  group: etl-ventas-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    name: Staging de ventas (${{ inputs.modo }})
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    env:
+      SOURCE_DATABASE_URL: ${{ secrets.NEON_SOURCE_DATABASE_URL }}
+      ANALYTICS_DATABASE_URL: ${{ secrets.NEON_ANALYTICS_DATABASE_URL }}
+      MODO: ${{ inputs.modo }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Instalar dependencias exactas (uv.lock)
+        run: uv sync --locked
+
+      - name: Ejecutar pipeline
+        run: uv run python -m etl.orchestration.pipeline --modo "$MODO" --disparador manual
+
+      - name: Resumen de la ejecución (desde la auditoría)
+        if: always()
+        run: |
+          {
+            echo "## ETL - Ventas · última ejecución"
+            echo ""
+            echo "| Ejecución | Modo | Estado | Leídas | Nuevas | Actualizadas | Rechazadas | Sin cambios | Reconciliado | Segundos |"
+            echo "|---|---|---|---:|---:|---:|---:|---:|---|---:|"
+            psql "$ANALYTICS_DATABASE_URL" -At -F ' | ' -c "
+              SELECT execution_id, mode, status, rows_read, rows_inserted, rows_updated,
+                     rows_rejected, rows_unchanged, coalesce(reconciled::text, '-'),
+                     round(extract(epoch FROM end_time - start_time))
+              FROM audit.etl_execution ORDER BY execution_id DESC LIMIT 1" | sed 's/^/| /; s/$/ |/'
+            echo ""
+            echo "### Reglas de calidad con casos"
+            echo ""
+            echo "| Tabla | Regla | Acción | Evaluadas | Fallaron |"
+            echo "|---|---|---|---:|---:|"
+            psql "$ANALYTICS_DATABASE_URL" -At -F ' | ' -c "
+              SELECT source_table, rule_code, action, rows_checked, rows_failed
+              FROM audit.dq_result
+              WHERE execution_id = (SELECT max(execution_id) FROM audit.etl_execution)
+                AND rows_failed > 0 ORDER BY 1, 2" | sed 's/^/| /; s/$/ |/'
+          } >> "$GITHUB_STEP_SUMMARY"

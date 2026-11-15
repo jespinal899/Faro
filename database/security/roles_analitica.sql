@@ -33,3 +33,23 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA stg_ready GRANT SELECT ON TABLES TO faro_etl;
 GRANT USAGE ON SCHEMA dw TO faro_etl;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA dw TO faro_etl;
 ALTER DEFAULT PRIVILEGES IN SCHEMA dw GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO faro_etl;
+
+-- ---------------------------------------------------------------------
+-- faro_api : lo usa la API del dashboard. SOLO lee las vistas aprobadas del esquema api
+--            (no ve dw, staging ni auditoría) y maneja el inicio de sesión de app.usuario.
+-- ---------------------------------------------------------------------
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'faro_api') THEN
+        CREATE ROLE faro_api NOLOGIN;
+    END IF;
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO faro_api', current_database());
+END;
+$$;
+
+GRANT USAGE ON SCHEMA api, app TO faro_api;
+GRANT SELECT ON ALL TABLES IN SCHEMA api TO faro_api;
+ALTER DEFAULT PRIVILEGES IN SCHEMA api GRANT SELECT ON TABLES TO faro_api;
+GRANT SELECT ON app.usuario TO faro_api;
+-- Solo puede actualizar el control de intentos y el último acceso (no contraseñas ni roles)
+GRANT UPDATE (intentos_fallidos, bloqueado_hasta, ultimo_acceso) ON app.usuario TO faro_api;

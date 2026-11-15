@@ -1,6 +1,7 @@
-# Pipeline de staging de ventas en producción (Neon).
+# Pipeline de ventas en producción (Neon): staging + Data Warehouse.
 #
-# Ejecuta: fuente (wwi_oltp) -> stg_raw -> stg_clean / cuarentena, con auditoría.
+# Ejecuta: fuente (wwi_oltp) -> staging (raw, clean, cuarentena, ready) -> dw, con
+# auditoría, y después valida el DW (11 controles de reconciliación y modelo).
 # El runner arranca, carga y se apaga: no hay servidor encendido (ver decisión D-13).
 #
 # Corre cada hora (latencia acordada: <= 1 hora, decisión D-17) y también a mano:
@@ -32,7 +33,7 @@ permissions:
 
 jobs:
   staging:
-    name: Staging de ventas (${{ inputs.modo || 'incremental' }})
+    name: Ventas → staging → DW (${{ inputs.modo || 'incremental' }})
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 30
@@ -51,11 +52,21 @@ jobs:
       - name: Ejecutar pipeline
         run: uv run python -m etl.orchestration.pipeline --modo "$MODO" --disparador "$DISPARADOR"
 
+      - name: Validar el Data Warehouse (reconciliación y modelo)
+        run: uv run python database/scripts/validar_dw.py
+
+      - name: Resultado de la validación
+        if: always()
+        run: |
+          if [ -f documentation/pruebas/validacion-dw-neon.md ]; then
+            sed "1s/^# /## /" documentation/pruebas/validacion-dw-neon.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Resumen de la ejecución (desde la auditoría)
         if: always()
         run: |
           {
-            echo "## ETL - Ventas · última ejecución"
+            echo "## ETL - Ventas (staging + DW) · última ejecución"
             echo ""
             echo "| Ejecución | Modo | Estado | Leídas | Nuevas | Actualizadas | Rechazadas | Sin cambios | Reconciliado | Segundos |"
             echo "|---|---|---|---:|---:|---:|---:|---:|---|---:|"

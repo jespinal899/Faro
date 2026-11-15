@@ -30,6 +30,12 @@ mlartifacts/
 machine-learning/models/*
 !machine-learning/models/.gitkeep
 
+# ===== Herramientas de agentes / Neon =====
+# Vínculo local con el proyecto de Neon (IDs de org/proyecto/rama de cada desarrollador)
+.neon
+# Preferencias personales de Claude Code (las compartidas van en .claude/settings.json)
+.claude/settings.local.json
+
 # ===== Logs =====
 *.log
 logs/

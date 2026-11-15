@@ -260,6 +260,7 @@ export interface RespuestaAsistente {
 
 export interface InfoAsistente {
   disponible: boolean;
+  proveedor: string;
   modelo: string;
   limite_hora: number;
   limite_dia: number;

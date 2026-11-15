@@ -8,6 +8,7 @@ import type { AfirmacionIA, ConsultaIA, InfoAsistente, RespuestaAsistente, TipoR
 import { Cargando, ErrorCarga } from "./Estados";
 
 const MAX_PREGUNTA = 500;
+const NOMBRE_PROVEEDOR: Record<string, string> = { groq: "Groq", ollama: "Ollama, local", anthropic: "Anthropic" };
 const TURNOS_DE_CONTEXTO = 3; // preguntas anteriores que acompañan a la nueva (seguimiento)
 
 const TIPOS: Record<TipoRespuestaIA, { etiqueta: string; color: string }> = {
@@ -132,8 +133,8 @@ function TarjetaRespuesta({ r, onPreguntar }: { r: RespuestaAsistente; onPregunt
         )}
         <Consultas consultas={r.consultas} />
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          Datos al {fFecha(r.datos_al)} · Generado por {r.generado_por} en {(r.duracion_ms / 1000).toFixed(1)} s · costo
-          aprox. USD {r.costo_usd.toFixed(4)}
+          Datos al {fFecha(r.datos_al)} · Generado por {r.generado_por} en {(r.duracion_ms / 1000).toFixed(1)} s ·{" "}
+          {r.costo_usd > 0 ? `costo aprox. USD ${r.costo_usd.toFixed(4)}` : "sin costo (plan gratuito)"}
         </Typography.Text>
       </Space>
     </Card>
@@ -196,7 +197,7 @@ export default function PanelAsistente() {
         title="Asistente de IA: respuestas generadas a partir de consultas al Data Warehouse"
         description={
           <>
-            Responde con {datos.modelo} usando solo consultas controladas (indicadores, tendencias, rankings y el
+            Responde con {datos.modelo} ({NOMBRE_PROVEEDOR[datos.proveedor] ?? datos.proveedor}) usando solo consultas controladas (indicadores, tendencias, rankings y el
             pronóstico); no accede a datos de clientes. Cada cifra muestra la consulta que la respalda: revísala en
             «Datos consultados». Las interpretaciones las genera la IA y pueden equivocarse. Preguntas hoy: {datos.usadas_hoy}{" "}
             de {datos.limite_dia}.

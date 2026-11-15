@@ -36,7 +36,7 @@ Las decisiones técnicas y su justificación están en
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena, zona ready, roles, simulador y ejecución horaria | ✅ Completa |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ✅ Completa |
 | 5. BI | API, dashboard y publicación en Vercel | ✅ Completa |
-| 6. ML y GenAI | Modelo predictivo y asistente | 🔄 En curso (pronóstico listo: modelo, proceso programado, API y pestaña del dashboard; falta el asistente) |
+| 6. ML y GenAI | Modelo predictivo y asistente | 🔄 En curso (pronóstico listo; asistente construido, falta su evaluación con el modelo real) |
 | 7. Automatización | Alertas y monitoreo | — |
 | 8. Integración | Pruebas end-to-end, despliegue, video | — |
 
@@ -48,6 +48,7 @@ Las decisiones técnicas y su justificación están en
 | [Diseño del staging y del ETL](documentation/arquitectura/diseno-staging-etl.md) | Zonas, carga incremental, nulos, reglas de calidad, auditoría y recuperación |
 | [Modelo dimensional](documentation/modelos/modelo-dimensional.md) | Grano, esquema estrella, dimensiones, medidas, SCD y productos en varios grupos |
 | [Modelo de Machine Learning](documentation/modelos/modelo-ml.md) | Pronóstico semanal: problema, datos, variables, validación, líneas base, resultados, límites y experimentos |
+| [Asistente de IA](documentation/arquitectura/asistente-ia.md) | Arquitectura segura, herramientas, configuración, costo, límites y pruebas |
 | [Registro de decisiones](documentation/decisiones/registro-decisiones.md) | D-01 a D-23, con alternativas y justificación |
 
 ---
@@ -316,6 +317,19 @@ con el rol `faro_ml`.
 |---|---|
 | [Modelo de ML](documentation/modelos/modelo-ml.md) | Problema, datos, variables, validación, resultados, utilidad, límites y experimentos |
 | Evaluación ([local](documentation/pruebas/evaluacion-ml-local.md) · [Neon](documentation/pruebas/evaluacion-ml-neon.md)) | Generada al entrenar: líneas base, candidatos, prueba por horizonte y grupo, cobertura del rango |
+
+## Asistente de IA (Claude)
+
+Responde en lenguaje natural preguntas sobre las ventas (pregunta P11, decisión D-25), en la
+pestaña **Asistente (IA)** del dashboard. El modelo (**Claude Haiku 5.5**) no escribe SQL: solo
+pide 4 consultas controladas que el servidor valida y ejecuta con el rol de solo lectura. Cada
+cifra cita la consulta que la respalda; las predicciones y las interpretaciones van aparte.
+
+- **Configuración:** `ANTHROPIC_API_KEY` en el `.env` y en Vercel (*sensitive*). El uso de la API se
+  paga con créditos de la consola de Anthropic, aparte del plan de Claude; cuesta menos de US$0.002
+  por pregunta.
+- **Pruebas con el modelo real:** `uv run python generative-ai/evaluar_asistente.py` (14 preguntas,
+  ver [generative-ai/](generative-ai/)).
 
 ## Seguridad: roles de mínimo privilegio
 

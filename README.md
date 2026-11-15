@@ -20,9 +20,15 @@ Machine Learning, un asistente de IA generativa y alertas automáticas.
 | ETL y ML | Python 3.12 (gestionado con `uv`) |
 | Contenedores | Docker + Docker Compose |
 | CI/CD | GitHub Actions (CI en cada PR · CD a Neon desde `main`) |
+| API y dashboard | FastAPI + React 19 + Apache ECharts, publicados en Vercel |
+| IA generativa | Groq (`openai/gpt-oss-120b`), plan gratuito |
+| Alertas | Correo por Gmail (SMTP) + pestaña en el dashboard |
 
 Las decisiones técnicas y su justificación están en
 [documentation/decisiones/registro-decisiones.md](documentation/decisiones/registro-decisiones.md).
+
+> **Para evaluar el proyecto:** el [índice de la entrega](documentation/entrega.md) enlaza cada
+> entregable de la guía con su evidencia. Producción: **https://faro-fawn-kappa.vercel.app**.
 
 ---
 
@@ -38,19 +44,33 @@ Las decisiones técnicas y su justificación están en
 | 5. BI | API, dashboard y publicación en Vercel | ✅ Completa |
 | 6. ML y GenAI | Pronóstico de ventas y asistente de IA | ✅ Completa |
 | 7. Automatización | Alertas y monitoreo | ✅ Completa · pendiente documentado: [disparador programado fiable](documentation/arquitectura/alertas.md#9-pendiente-un-disparador-programado-fiable) |
-| 8. Integración | Pruebas end-to-end, documentación, manuales y demo | 🚧 En curso |
+| 8. Integración | Prueba de punta a punta, requerimientos, diagramas, plan de pruebas, manuales y guion de la demo | ✅ Completa (el video lo graba el autor) |
 
 ### Documentación de diseño
 
 | Documento | Contenido |
 |---|---|
-| [Arquitectura de la solución](documentation/arquitectura/arquitectura.md) | Capas, flujo de datos, entornos, decisiones de la guía, seguridad y monitoreo |
+| [Requerimientos](documentation/arquitectura/requerimientos.md) | Funcionales y no funcionales, con su implementación y evidencia |
+| [Arquitectura de la solución](documentation/arquitectura/arquitectura.md) | Capas, flujo de datos, entornos, decisiones de la guía, seguridad, monitoreo y costos |
 | [Diseño del staging y del ETL](documentation/arquitectura/diseno-staging-etl.md) | Zonas, carga incremental, nulos, reglas de calidad, auditoría y recuperación |
+| [Diagramas del ETL y la orquestación](documentation/arquitectura/diagramas-etl.md) | Extracción, transformación, carga y workflows |
+| [Catálogo de reglas de calidad](documentation/modelos/catalogo-reglas-calidad.md) | 16 reglas y 35 controles, generado desde el código del ETL |
 | [Modelo dimensional](documentation/modelos/modelo-dimensional.md) | Grano, esquema estrella, dimensiones, medidas, SCD y productos en varios grupos |
 | [Modelo de Machine Learning](documentation/modelos/modelo-ml.md) | Pronóstico semanal: problema, datos, variables, validación, líneas base, resultados, límites y experimentos |
 | [Asistente de IA](documentation/arquitectura/asistente-ia.md) | Arquitectura segura, herramientas, configuración, costo, límites y pruebas |
 | [Alertas y automatización](documentation/arquitectura/alertas.md) | Reglas, contenido, canales, frecuencia, duplicados, reintentos, estados, monitoreo y pruebas |
 | [Registro de decisiones](documentation/decisiones/registro-decisiones.md) | D-01 a D-27, con alternativas y justificación |
+| [Plan y resultados de pruebas](documentation/pruebas/plan-de-pruebas.md) | Estrategia, matriz de la guía, inventario y resultados |
+
+### Manuales
+
+| Manual | Para quién |
+|---|---|
+| [Instalación](documentation/manuales/manual-instalacion.md) | Levantar todo en una PC, paso a paso |
+| [Despliegue](documentation/manuales/manual-despliegue.md) | Publicar en Neon, GitHub Actions y Vercel; verificar y revertir |
+| [Operación y recuperación](documentation/manuales/manual-operacion.md) | Vigilar, atender fallas y reconstruir en orden |
+| [Usuario](documentation/manuales/manual-usuario.md) | Usar el dashboard |
+| [Guion del video y demo](documentation/manuales/guion-video-y-demo.md) | Material de apoyo para la presentación |
 
 ---
 
@@ -387,11 +407,12 @@ El dueño de las bases solo se usa para desplegar la estructura (workflow *CD - 
 ```powershell
 uv run ruff check .            # errores y malas prácticas
 uv run ruff format .           # aplica el formato estándar
-uv run pytest -v               # pruebas (las de integración requieren la base levantada)
+uv run pytest -v               # 175 pruebas (las de integración requieren la base levantada),
+                               # incluida la de punta a punta: tests/test_e2e_integral.py
 
 cd frontend
 npm run lint                   # ESLint
-npm test                       # pruebas unitarias del dashboard (Vitest)
+npm test                       # 48 pruebas del dashboard (Vitest)
 npm run build                  # compila TypeScript y genera el sitio (frontend/dist)
 
 # Prueba de punta a punta con un navegador real (solo en local: necesita la base con los datos).
@@ -412,6 +433,7 @@ npm run e2e
    | Calidad de código | `ruff` sin errores y con formato correcto |
    | Pruebas | `pytest` contra un PostgreSQL 17 temporal (misma versión que Neon) |
    | Validar docker-compose | que el archivo de Docker sea válido |
+   | Dashboard | ESLint, pruebas de Vitest y compilación |
 
 4. Solo se integra a `main` si todos los jobs pasan (regla de protección de la rama).
    Se integra con *rebase* para conservar cada commit en el historial.
@@ -452,7 +474,7 @@ docker compose up -d       # vuelve a crear las bases vacías
 ├── notifications/      alertas
 ├── tests/              pruebas automatizadas (pytest)
 ├── .github/workflows/  pipelines de CI/CD (GitHub Actions)
-├── deployment/         configuración de producción
+├── deployment/         índice de la configuración de cada entorno
 ├── docker-compose.yml  entorno de desarrollo
 ├── pyproject.toml      dependencias de Python (uv)
 └── .env.example        plantilla de variables (sin secretos)

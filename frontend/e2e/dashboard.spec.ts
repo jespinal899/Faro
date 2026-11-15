@@ -25,7 +25,7 @@ async function esperarAnimaciones(page: Page) {
   );
 }
 
-test("flujo completo: sesión, KPI, filtros, drill-down, detalle, modo oscuro, móvil y pronóstico", async ({ page }) => {
+test("flujo completo: sesión, KPI, filtros, drill-down, detalle, modo oscuro, móvil, pronóstico y asistente", async ({ page }) => {
   test.skip(!PASSWORD, "Falta FARO_PASSWORD_DEMO en .env");
 
   // 1. Inicio de sesión
@@ -97,7 +97,19 @@ test("flujo completo: sesión, KPI, filtros, drill-down, detalle, modo oscuro, m
   await esperarGraficos(page);
   await page.screenshot({ path: `${CAPTURAS}/07-pronostico.png`, fullPage: true });
 
-  // 9. Cerrar sesión
+  // 9. Asistente de IA (modelo real: Groq en su plan gratuito): una pregunta de ejemplo cuya
+  //    respuesta debe citar la consulta que la respalda
+  await page.getByRole("tab", { name: /Asistente/ }).click();
+  await expect(page.getByText(/respuestas generadas a partir de consultas al Data Warehouse/)).toBeVisible();
+  await page.getByRole("button", { name: /territorios presentan una disminución/ }).click();
+  const respuesta = page.getByTestId("respuesta-ia");
+  await expect(respuesta).toBeVisible({ timeout: 60_000 });
+  await expect(respuesta.getByText(/^consulta \d+$/).first()).toBeVisible();
+  await respuesta.getByText(/^Datos consultados/).click(); // muestra la consulta y sus parámetros
+  await esperarAnimaciones(page);
+  await page.screenshot({ path: `${CAPTURAS}/08-asistente.png`, fullPage: true });
+
+  // 10. Cerrar sesión
   await page.getByRole("button", { name: /Usuario Demo/ }).hover();
   await page.getByText("Cerrar sesión").click();
   await expect(page.getByRole("button", { name: /ingresar/i })).toBeVisible();

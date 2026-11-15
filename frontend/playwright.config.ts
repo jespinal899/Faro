@@ -18,7 +18,7 @@ if (existsSync(env)) {
 
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 90_000,
+  timeout: 150_000, // incluye una respuesta real del asistente de IA
   workers: 1,
   reporter: [["list"]],
   use: {
@@ -31,6 +31,9 @@ export default defineConfig({
       command: "uv run uvicorn backend.app.main:app --port 8000",
       cwd: "..",
       url: "http://localhost:8000/api/salud",
+      // Solo en esta API de prueba: sin el límite de preguntas por hora del asistente (las
+      // evaluaciones lo agotan); el límite real sigue igual en todos los demás entornos
+      env: { ASISTENTE_LIMITE_HORA: "1000", ASISTENTE_LIMITE_DIA: "1000" },
       reuseExistingServer: true,
       timeout: 90_000,
     },

@@ -137,14 +137,99 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
 - **Pendiente (Fase 3):** reemplazar el rol dueño (`*_owner`) por roles de mínimo privilegio
   para el ETL, la API y el asistente de IA.
 
+## D-12 · Arquitectura por capas con lotes incrementales y DW estilo Kimball
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:** las 7 capas de la guía:
+  - Extracción incremental por lotes (*micro-batch*).
+  - Staging de tres zonas más cuarentena.
+  - Data Warehouse dimensional en esquema estrella.
+  - Una sola API para el dashboard, la IA y las alertas.
+- **Alternativas descartadas:**
+  - *Streaming* (Kafka, CDC o arquitecturas Lambda/Kappa): ningún caso de uso necesita
+    latencia de segundos.
+  - DW normalizado (Inmon) o Data Vault: la guía pide un modelo dimensional.
+  - Lakehouse (Spark): un volumen de ~120 MB no lo justifica.
+- Detalle en [arquitectura.md](../arquitectura/arquitectura.md).
+
+## D-13 · Orquestación con GitHub Actions
+
+- **Estado:** Aceptada (2026-11-15). **Reemplaza** la propuesta inicial de usar Prefect.
+- **Decisión:** los pipelines se programan con `cron` en GitHub Actions y también se pueden
+  lanzar a mano. La lógica ETL vive en módulos Python independientes del orquestador.
+- **Justificación:**
+  - El pipeline es lineal (extraer → validar → cargar), sin dependencias complejas, que es
+    cuando la guía justifica Airflow.
+  - Prefect o Airflow necesitan un servidor encendido todo el tiempo (costo de hosting).
+    Con Neon (*scale-to-zero*), un ejecutor efímero que arranca, carga y se apaga es la
+    combinación natural.
+  - Ya tenemos ahí los *secrets*, los logs por ejecución y el CI/CD. Es gratis en repositorios
+    públicos.
+- **Limitaciones aceptadas:**
+  - El `cron` de GitHub puede retrasarse unos minutos. Se tolera porque la latencia acordada
+    es ≤ 1 hora.
+  - GitHub desactiva los workflows programados tras 60 días sin actividad en el repositorio.
+  - Los reintentos se implementan en el código, con espera creciente.
+
+## D-14 · Staging en zonas, carga incremental por watermark e idempotencia
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - Zonas `stg_raw` (solo se agregan filas), `stg_clean`, `stg_quarantine`, `stg_ready` y `audit`.
+  - Watermark por tabla sobre `last_edited_when`, con ventana de solapamiento de 10 minutos;
+    el watermark solo avanza si la ejecución completa termina bien.
+  - UPSERT por clave natural para que repetir una ejecución no duplique datos.
+  - 12 reglas de calidad, cada una con su acción (cuarentena, marcar o aceptar).
+- Detalle en [diseno-staging-etl.md](../arquitectura/diseno-staging-etl.md).
+
+## D-15 · Grano de la línea de factura, esquema estrella y SCD
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - `fact_ventas` tiene una fila por línea de factura.
+  - Seis dimensiones con clave sustituta y miembro desconocido (`-1`).
+  - **SCD Tipo 2** en la segmentación de cliente (categoría, grupo de compra, cliente de
+    facturación) y en el precio y grupo principal del producto; Tipo 1 en el resto.
+  - `dim_fecha` con clave `AAAAMMDD` y rol doble (factura y pedido).
+- **Justificación:** el grano de pedido contaría *backorders* no vendidos (H06); con el grano
+  de factura se perdería el producto. Tipo 2 preserva el contexto de cada venta en el momento
+  en que ocurrió.
+- Detalle en [modelo-dimensional.md](../modelos/modelo-dimensional.md).
+
+## D-16 · Productos en varios grupos: grupo principal + tabla puente
+
+- **Estado:** Aceptada (2026-11-15)
+- **Problema:** unir las ventas directamente con producto-grupo infla el total un **60 %**
+  (198.0 M → 317.3 M).
+- **Decisión:**
+  - Cada producto tiene un `grupo_principal`: el **más específico**, según una prioridad fija
+    y documentada. Las ventas por grupo principal suman exactamente el total (198 043 439).
+  - La tabla `puente_producto_grupo`, con `factor_ponderacion = 1/n`, responde el análisis
+    por pertenencia sin duplicar importes.
+- **Alternativas descartadas:**
+  - Elegir el primer grupo por ID: es arbitrario y deja *Novelty Items* como principal de casi
+    todo.
+  - Usar solo el puente: complica todas las consultas del dashboard.
+
+## D-17 · Frecuencia y definición de "tiempo real"
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - En producción el ETL corre **una vez por hora**, y además se puede lanzar a mano en la
+    demo. "Tiempo real" en Faro significa **latencia ≤ 1 hora** desde la venta hasta el DW y
+    las alertas.
+  - Un **simulador** genera operación continua a partir del 1-jun-2016 y marca sus datos como
+    simulados, como exige la guía.
+- **Justificación:** respeta la cuota gratuita de Neon (100 CU-horas por proyecto al mes) y
+  evita confundir un batch frecuente con tiempo real.
+
 ---
 
 ## Pendientes
 
 | Tema | Fase |
 |---|---|
-| Orquestador de pipelines | 3 |
-| Estrategia SCD por dimensión | 4 |
+| Roles de mínimo privilegio en Neon (en lugar de `*_owner`) | 3 |
 | Backend, frontend y hosting de la aplicación | 5 |
 | Modelo de ML y proveedor de IA generativa | 6 |
 | Canales de notificación | 7 |

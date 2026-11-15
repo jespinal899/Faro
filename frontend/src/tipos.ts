@@ -217,3 +217,52 @@ export interface PuntoPrueba {
   superior: number;
   linea_base: number;
 }
+
+// ------------------------------------------------- asistente de IA
+// Las cifras de "hechos" vienen de consultas al DW; "predicciones" del modelo de pronóstico;
+// "interpretaciones" las genera la IA.
+
+export interface AfirmacionIA {
+  texto: string;
+  consultas: number[];
+  respaldada: boolean;
+}
+
+export interface ConsultaIA {
+  numero: number;
+  herramienta: string;
+  descripcion: string;
+  parametros: Record<string, unknown>;
+  resultado: Record<string, unknown> | null;
+  error: string | null;
+}
+
+export type TipoRespuestaIA = "respuesta" | "sin_datos" | "fuera_de_alcance" | "aclaracion" | "error";
+
+export interface RespuestaAsistente {
+  tipo: TipoRespuestaIA;
+  resumen: string;
+  hechos: AfirmacionIA[];
+  predicciones: AfirmacionIA[];
+  interpretaciones: string[];
+  sugerencias: string[];
+  consultas: ConsultaIA[];
+  datos_al: string;
+  ultima_carga: string | null;
+  incluye_simulados: boolean;
+  generado_por: string;
+  tokens_entrada: number;
+  tokens_salida: number;
+  costo_usd: number;
+  duracion_ms: number;
+  advertencias: string[];
+}
+
+export interface InfoAsistente {
+  disponible: boolean;
+  modelo: string;
+  limite_hora: number;
+  limite_dia: number;
+  usadas_hoy: number;
+  ejemplos: string[];
+}

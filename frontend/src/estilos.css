@@ -118,3 +118,44 @@ body {
 .fila-elegida > td {
   background: rgba(42, 120, 214, 0.08) !important;
 }
+
+/* Asistente de IA */
+.ia-ejemplos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.ia-ejemplos .ant-btn {
+  white-space: normal;
+  height: auto;
+  text-align: left;
+}
+.ia-pregunta {
+  align-self: flex-end;
+  max-width: 85%;
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(42, 120, 214, 0.12);
+  overflow-wrap: anywhere;
+}
+.ia-seccion ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}
+.ia-cita {
+  font-size: 11px;
+  margin-inline-end: 2px;
+}
+.ia-datos {
+  max-height: 220px;
+  overflow: auto;
+  margin: 0;
+  padding: 8px;
+  font-size: 11.5px;
+  background: rgba(127, 127, 127, 0.08);
+  border-radius: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -1,21 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Col, Layout, Row, Tabs, Typography } from "antd";
-import { BarChartOutlined, LineChartOutlined, RobotOutlined } from "@ant-design/icons";
+import { Badge, Col, Layout, Row, Tabs, Typography } from "antd";
+import { AlertOutlined, BarChartOutlined, DashboardOutlined, LineChartOutlined, RobotOutlined } from "@ant-design/icons";
 import { useApi } from "./hooks/useApi";
+import { useIntervalo } from "./hooks/useIntervalo";
 import { aParametros, FILTRO_DE_DIMENSION, FILTROS_INICIALES, periodoPorDefecto, type Etiquetas, type EstadoFiltros } from "./filtros";
 import type { Modo } from "./tema";
-import type { EstadoDatos, FilaDesglose, Opciones, RespuestaKpis, Usuario } from "./tipos";
+import type { EstadoDatos, FilaDesglose, Opciones, RespuestaKpis, ResumenAlertas, Usuario } from "./tipos";
 import BarraFiltros from "./componentes/BarraFiltros";
 import DetalleFactura from "./componentes/DetalleFactura";
 import Encabezado from "./componentes/Encabezado";
 import GraficoDesglose from "./componentes/GraficoDesglose";
 import GraficoTendencia from "./componentes/GraficoTendencia";
+import PanelAlertas, { INTERVALO_ALERTAS_MS } from "./componentes/PanelAlertas";
 import PanelAsistente from "./componentes/PanelAsistente";
+import PanelOperacion from "./componentes/PanelOperacion";
 import PanelPronostico from "./componentes/PanelPronostico";
 import TablaFacturas from "./componentes/TablaFacturas";
 import TarjetasKpi from "./componentes/TarjetasKpi";
 
-type Pestana = "historico" | "pronostico" | "asistente";
+type Pestana = "historico" | "pronostico" | "asistente" | "alertas" | "operacion";
 
 interface Props {
   usuario: Usuario;
@@ -27,6 +30,9 @@ interface Props {
 export default function Dashboard({ usuario, modo, onCambiarModo, onSalir }: Props) {
   const opciones = useApi<Opciones>("/api/opciones");
   const estado = useApi<EstadoDatos>("/api/estado");
+  // Contador de alertas nuevas en la pestaña: se consulta cada minuto (polling, D-22)
+  const alertas = useApi<ResumenAlertas>("/api/alertas/resumen");
+  useIntervalo(alertas.recargar, INTERVALO_ALERTAS_MS);
   const [filtros, setFiltros] = useState<EstadoFiltros>(FILTROS_INICIALES);
   const [etiquetas, setEtiquetas] = useState<Etiquetas>({});
   const [inicializado, setInicializado] = useState(false);
@@ -121,6 +127,29 @@ export default function Dashboard({ usuario, modo, onCambiarModo, onSalir }: Pro
               label: "Asistente (IA)",
               icon: <RobotOutlined />,
               children: asistenteAbierto ? <PanelAsistente /> : null,
+            },
+            {
+              key: "alertas",
+              label: (
+                <Badge
+                  count={alertas.datos?.nuevas ?? 0}
+                  size="small"
+                  offset={[10, -2]}
+                  color={alertas.datos?.criticas_nuevas ? "red" : "blue"}
+                  title={`${alertas.datos?.nuevas ?? 0} alerta(s) nueva(s)`}
+                >
+                  <span>
+                    <AlertOutlined /> Alertas
+                  </span>
+                </Badge>
+              ),
+              children: pestana === "alertas" ? <PanelAlertas onCambio={alertas.recargar} /> : null,
+            },
+            {
+              key: "operacion",
+              label: "Operación",
+              icon: <DashboardOutlined />,
+              children: pestana === "operacion" ? <PanelOperacion /> : null,
             },
           ]}
         />

@@ -208,7 +208,7 @@ uv run uvicorn backend.app.main:app --reload --port 8000
 | [Documentación de la API](documentation/api/README.md) | Autenticación, endpoints, filtros, errores y seguridad |
 | [Contrato OpenAPI](documentation/api/openapi.json) | Generado desde el código |
 | [Catálogo de KPI](documentation/modelos/kpis.md) | Ficha de cada indicador |
-| [Tiempos de respuesta](documentation/pruebas/tiempos-api-local.md) | Mediana por endpoint con los datos completos |
+| Tiempos de respuesta ([local](documentation/pruebas/tiempos-api-local.md) · [producción](documentation/pruebas/tiempos-api-vercel.md)) | Mediana por endpoint con los datos completos; en producción, todas < 1 s medidas desde la PC (incluye la red) |
 
 ## Dashboard web (React)
 

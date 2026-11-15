@@ -48,10 +48,14 @@ def numeros(texto: str) -> list[tuple[float, bool]]:
 
 
 def _hojas(valor) -> list[float]:
+    """Todos los números de un resultado, también los escritos en textos (p. ej. una nota con
+    'rango probable del 80 %'): siguen siendo la fuente."""
     if isinstance(valor, bool):
         return []
     if isinstance(valor, int | float):
         return [float(valor)]
+    if isinstance(valor, str):
+        return [v for v, _ in numeros(valor)]
     if isinstance(valor, dict):
         return [x for v in valor.values() for x in _hojas(v)]
     if isinstance(valor, list):

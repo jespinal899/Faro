@@ -1,0 +1,49 @@
+# Pronóstico semanal de ventas por grupo de producto en producción (Neon). Fase 6, D-24.
+#
+# Cada lunes pronostica las 4 semanas siguientes a la última semana completa del DW con el
+# modelo vigente, y guarda el resultado con su versión, origen y horizonte (ml.pronostico).
+# A mano: Actions -> ML - Pronóstico -> Run workflow (marcar "entrenar" para reentrenar,
+# evaluar contra las líneas base y registrar una versión nueva antes de pronosticar).
+#
+# Usa el rol faro_ml: lee solo la vista ml.ventas_semanales y escribe en el esquema ml.
+# El reporte de evaluación y el pronóstico quedan en el resumen de la ejecución.
+
+name: ML - Pronóstico
+
+on:
+  schedule:
+    - cron: "30 12 * * 1" # lunes 12:30 UTC, después del simulador (11:40) y del ETL horario
+  workflow_dispatch:
+    inputs:
+      entrenar:
+        description: "Reentrenar y evaluar el modelo antes de pronosticar"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ml-pronostico-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pronostico:
+    name: Pronóstico semanal${{ inputs.entrenar && ' (con reentrenamiento)' || '' }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      ML_DATABASE_URL: ${{ secrets.NEON_ML_ANALYTICS_URL }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Instalar dependencias exactas (uv.lock + grupo ml)
+        run: uv sync --locked --group ml
+
+      - name: Reentrenar, evaluar y registrar el modelo
+        if: inputs.entrenar
+        run: uv run python -m machine_learning entrenar
+
+      - name: Pronosticar las 4 semanas siguientes
+        run: uv run python -m machine_learning predecir

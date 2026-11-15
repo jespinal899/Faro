@@ -35,7 +35,7 @@ Las decisiones técnicas y su justificación están en
 | 2. Diseño | Arquitectura, staging, grano, dimensiones | ✅ Completa |
 | 3. ETL y calidad | Extracción, limpieza, auditoría, cuarentena, zona ready, roles, simulador y ejecución horaria | ✅ Completa |
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ✅ Completa |
-| 5. BI | API y dashboard | ⏳ Siguiente |
+| 5. BI | API y dashboard | 🔄 En curso (API lista; faltan el dashboard y la publicación en Vercel) |
 | 6. ML y GenAI | Modelo predictivo y asistente | — |
 | 7. Automatización | Alertas y monitoreo | — |
 | 8. Integración | Pruebas end-to-end, despliegue, video | — |
@@ -188,6 +188,26 @@ GROUP BY 1, 2 ORDER BY 1, 3 DESC;
 | [Diccionario del DW](documentation/modelos/diccionario-dw.md) | Tablas, columnas, claves y descripciones (generado desde la base) |
 | [Pruebas del DW](documentation/pruebas/pruebas-dw.md) | Pruebas automáticas y controles de validación |
 | Validación ([local](documentation/pruebas/validacion-dw-local.md) · [Neon](documentation/pruebas/validacion-dw-neon.md)) | Resultado de los 11 controles y ventas por año |
+
+## API del dashboard (FastAPI)
+
+El navegador nunca se conecta a la base: el dashboard consume esta API, que lee el DW a través
+de vistas aprobadas (`api.*`) con un rol de solo lectura (`faro_api`). Requiere iniciar sesión.
+
+```powershell
+# Una sola vez: crear el usuario de demostración (la contraseña queda en .env: FARO_PASSWORD_DEMO)
+uv run python database/scripts/crear_usuario.py --usuario demo --nombre "Usuario Demo"
+
+uv run uvicorn backend.app.main:app --reload --port 8000
+# Documentación interactiva: http://localhost:8000/api/docs
+```
+
+| Documento | Contenido |
+|---|---|
+| [Documentación de la API](documentation/api/README.md) | Autenticación, endpoints, filtros, errores y seguridad |
+| [Contrato OpenAPI](documentation/api/openapi.json) | Generado desde el código |
+| [Catálogo de KPI](documentation/modelos/kpis.md) | Ficha de cada indicador |
+| [Tiempos de respuesta](documentation/pruebas/tiempos-api-local.md) | Mediana por endpoint con los datos completos |
 
 ## Simulador de ventas (datos SIMULADOS)
 

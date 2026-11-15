@@ -51,7 +51,7 @@ function Frescura({ ultima }: { ultima?: EjecucionEtl }) {
         fallo
           ? `La última ejecución del ETL (#${ultima.ejecucion_id}) falló`
           : atrasado
-            ? `Sin cargas en las últimas ${Math.floor(horas)} horas`
+            ? `Sin cargas en las últimas ${Math.round(horas)} horas`
             : "El ETL está al día"
       }
       description={
@@ -152,7 +152,25 @@ export default function PanelOperacion() {
                   { title: "Dimensión", dataIndex: "dimension" },
                   { title: "Reglas", align: "right", className: "num", dataIndex: "reglas" },
                   { title: "Filas evaluadas", align: "right", className: "num", render: (_, d) => fEntero(d.evaluadas) },
-                  { title: "Incumplen", align: "right", className: "num", render: (_, d) => fEntero(d.fallaron) },
+                  {
+                    title: "Incumplen",
+                    align: "right",
+                    className: "num",
+                    render: (_, d) => (
+                      <>
+                        {fEntero(d.fallaron)}
+                        {d.fallaron > 0 && (
+                          <div style={{ fontSize: 11 }}>
+                            <Typography.Text type="secondary">
+                              {[d.a_cuarentena > 0 && `${fEntero(d.a_cuarentena)} a cuarentena`, d.marcadas > 0 && `${fEntero(d.marcadas)} marcadas`]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </Typography.Text>
+                          </div>
+                        )}
+                      </>
+                    ),
+                  },
                   {
                     title: "Cumplimiento",
                     render: (_, d) =>
@@ -163,7 +181,8 @@ export default function PanelOperacion() {
                           <Progress
                             percent={Math.floor(d.cumplimiento_pct * 10) / 10}
                             size="small"
-                            status={d.fallaron > 0 ? "exception" : "success"}
+                            // Rojo solo si hubo filas rechazadas; las marcadas (p. ej. atípicos) sí se cargan
+                            status={d.a_cuarentena > 0 ? "exception" : d.marcadas > 0 ? "normal" : "success"}
                             format={(p) => `${p} %`}
                             style={{ minWidth: 120, margin: 0 }}
                           />
@@ -180,7 +199,8 @@ export default function PanelOperacion() {
                   .filter((c) => c.pendientes > 0)
                   .map((c) => `${c.tabla} · ${c.regla}: ${c.pendientes}`)
                   .join("; ")})`}
-              . Se reintentan en cada ejecución.
+              . Se reintentan en cada ejecución. Las filas «marcadas» incumplen una regla de aviso (p. ej. un importe
+              atípico) y sí se cargan al Data Warehouse, con su marca.
             </Typography.Text>
           </Card>
         </Col>

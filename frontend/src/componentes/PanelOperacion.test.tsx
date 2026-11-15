@@ -31,8 +31,9 @@ const BASE: RespuestaMonitoreo = {
     { tabla: "sales.invoice_lines", regla: "V01", dimension: "Validez", descripcion: "Cantidad > 0", accion: "cuarentena", evaluadas: 0, fallaron: 0 },
   ],
   dimensiones: [
-    { dimension: "Completitud", reglas: 1, evaluadas: 1000, fallaron: 2, cumplimiento_pct: 99.8 },
-    { dimension: "Validez", reglas: 1, evaluadas: 0, fallaron: 0, cumplimiento_pct: null },
+    { dimension: "Completitud", reglas: 1, evaluadas: 1000, fallaron: 2, a_cuarentena: 2, marcadas: 0, cumplimiento_pct: 99.8 },
+    { dimension: "Atípicos", reglas: 1, evaluadas: 1000, fallaron: 30, a_cuarentena: 0, marcadas: 30, cumplimiento_pct: 97 },
+    { dimension: "Validez", reglas: 1, evaluadas: 0, fallaron: 0, a_cuarentena: 0, marcadas: 0, cumplimiento_pct: null },
   ],
   cuarentena: [{ tabla: "sales.invoices", regla: "C01", pendientes: 2, resueltos: 5, ultimo_rechazo: "2026-11-15T20:00:00Z" }],
   modelo: {
@@ -80,6 +81,8 @@ describe("PanelOperacion", () => {
     const calidad = screen.getByText("Calidad de datos por dimensión").closest(".ant-card") as HTMLElement;
     expect(within(calidad).getByText("Completitud")).toBeInTheDocument();
     expect(within(calidad).getByText("Sin filas en esta carga")).toBeInTheDocument();
+    expect(within(calidad).getByText("2 a cuarentena")).toBeInTheDocument();
+    expect(within(calidad).getByText("30 marcadas")).toBeInTheDocument();
     expect(within(calidad).getByText(/sales\.invoices · C01: 2/)).toBeInTheDocument();
 
     expect(screen.getByText("20261115.145744")).toBeInTheDocument();

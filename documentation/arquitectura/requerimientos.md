@@ -101,7 +101,7 @@ implementado y qué **evidencia** lo comprueba. Las preguntas analíticas (P01 a
 | RNF-09 | Confiabilidad | Todo o nada en cada carga | Rollback y reintento sin inconsistencias | ✅ | `tests/test_etl_staging.py` |
 | RNF-10 | Confiabilidad | Control de uso del asistente | 20 preguntas por hora y 100 por día por usuario | ✅ | `tests/test_api_asistente.py` |
 | RNF-11 | Reproducibilidad | Cualquiera puede levantar el proyecto con el README | Dependencias exactas (`uv.lock`, `package-lock.json`) y Docker | ✅ | [manual de instalación](../manuales/manual-instalacion.md) · CI |
-| RNF-12 | Mantenibilidad | Pruebas automáticas y CI obligatorio | Rama `main` protegida con 4 checks | ✅ 171 pruebas Python y 48 Vitest | [plan de pruebas](../pruebas/plan-de-pruebas.md) |
+| RNF-12 | Mantenibilidad | Pruebas automáticas y CI obligatorio | Rama `main` protegida con 4 checks | ✅ 175 pruebas Python, 48 Vitest y un flujo E2E en el navegador | [plan de pruebas](../pruebas/plan-de-pruebas.md) |
 | RNF-13 | Usabilidad | Uso en escritorio y móvil, accesible | Diseño adaptable, modo oscuro, tablas en lugar de gráficos y color nunca como único código | ✅ | Capturas [05](../capturas/05-modo-oscuro.png) y [06](../capturas/06-movil.png) |
 | RNF-14 | Trazabilidad | Linaje de cada dato | Lote, tabla y momento de extracción en staging; lote en el DW | ✅ | [diseño del staging](diseno-staging-etl.md) |
 | RNF-15 | Costo | Operar sin costo | US$0 al mes | ✅ Planes gratuitos | [arquitectura §9](arquitectura.md#9-costos) |

@@ -56,6 +56,10 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA api GRANT SELECT ON TABLES TO faro_api;
 GRANT SELECT ON app.usuario TO faro_api;
 -- Solo puede actualizar el control de intentos y el último acceso (no contraseñas ni roles)
 GRANT UPDATE (intentos_fallidos, bloqueado_hasta, ultimo_acceso) ON app.usuario TO faro_api;
+-- Asistente de IA: registra cada pregunta y cuenta las recientes (límite por usuario). No
+-- puede modificar ni borrar el registro. El asistente consulta los datos con las mismas
+-- vistas aprobadas y de solo lectura: el modelo nunca ejecuta SQL (decisión D-25).
+GRANT SELECT, INSERT ON app.consulta_asistente TO faro_api;
 
 -- ---------------------------------------------------------------------
 -- faro_ml : entrena el modelo y genera los pronósticos (workflow "ML - Pronóstico").

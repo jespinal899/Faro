@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PALETAS } from "../tema";
-import { opcionTendencia } from "./GraficoTendencia";
+import { opcionTendencia, periodosIncompletos } from "./GraficoTendencia";
 import { opcionDesglose } from "./GraficoDesglose";
 
 const p = PALETAS.claro;
@@ -30,6 +30,32 @@ describe("gráfico de tendencia", () => {
     ) as { series: unknown[]; legend?: unknown };
     expect(op.series).toHaveLength(1);
     expect(op.legend).toBeUndefined();
+  });
+});
+
+describe("períodos incompletos", () => {
+  const punto = (periodo: string) => ({ periodo, ventas_netas: 1, utilidad: 1, facturas: 1, ventas_netas_anterior: 1 });
+  const meses = ["2016-01-01", "2016-05-01", "2016-06-01"].map(punto);
+
+  it("marca el último mes si el rango termina antes de fin de mes (junio con 2 días)", () => {
+    expect([...periodosIncompletos(meses, "mes", "2016-01-01", "2016-06-02")]).toEqual([2]);
+  });
+
+  it("marca el primero si el rango empieza a mitad de mes, y ninguno si cubre meses enteros", () => {
+    expect([...periodosIncompletos(meses, "mes", "2016-01-15", "2016-06-30")]).toEqual([0]);
+    expect(periodosIncompletos(meses, "mes", "2016-01-01", "2016-06-30").size).toBe(0);
+  });
+
+  it("las semanas van de lunes a domingo; los días nunca son incompletos", () => {
+    const semanas = ["2016-05-23", "2016-05-30"].map(punto); // lunes
+    expect([...periodosIncompletos(semanas, "semana", "2016-05-23", "2016-06-02")]).toEqual([1]);
+    expect(periodosIncompletos([punto("2016-06-02")], "dia", "2016-06-02", "2016-06-02").size).toBe(0);
+  });
+
+  it("el gráfico añade * a la etiqueta del período incompleto", () => {
+    const op = opcionTendencia(meses, "mes", p, new Set([2])) as { xAxis: { data: string[] } };
+    expect(op.xAxis.data[2].endsWith("*")).toBe(true);
+    expect(op.xAxis.data[1].endsWith("*")).toBe(false);
   });
 });
 

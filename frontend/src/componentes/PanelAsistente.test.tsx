@@ -6,7 +6,8 @@ import PanelAsistente from "./PanelAsistente";
 
 const INFO: InfoAsistente = {
   disponible: true,
-  modelo: "claude-haiku-5-5",
+  proveedor: "groq",
+  modelo: "openai/gpt-oss-120b",
   limite_hora: 20,
   limite_dia: 100,
   usadas_hoy: 2,
@@ -105,6 +106,14 @@ describe("asistente de IA", () => {
     render(<PanelAsistente />);
     await userEvent.type(await screen.findByLabelText("Pregunta para el asistente"), "¿Cuánto vendimos?{Enter}");
     expect(await screen.findByText(/Llegaste al límite de preguntas/)).toBeInTheDocument();
+  });
+
+  it("sin costo muestra el plan gratuito en lugar de USD 0", async () => {
+    simularApi(INFO, { estado: 200, cuerpo: { ...RESPUESTA, costo_usd: 0, generado_por: "openai/gpt-oss-120b" } });
+    render(<PanelAsistente />);
+    await userEvent.click(await screen.findByText(INFO.ejemplos[0]));
+    expect(await screen.findByText(/sin costo \(plan gratuito\)/)).toBeInTheDocument();
+    expect(screen.getByText(/\(Groq\) usando solo consultas controladas/)).toBeInTheDocument();
   });
 
   it("sin clave configurada lo dice en lugar de mostrar el chat", async () => {

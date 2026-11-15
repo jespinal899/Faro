@@ -468,7 +468,7 @@ docker compose up -d       # vuelve a crear las bases vacías
 ├── simulador/          simulador de ventas (operación continua para la demo)
 ├── backend/            API
 ├── frontend/           dashboard web
-├── machine_learning/   pronóstico de ventas (paquete de Python), notebooks y modelos
+├── machine_learning/   pronóstico de ventas (paquete de Python; el modelo se registra en el esquema ml)
 ├── generative-ai/      asistente analítico
 ├── notifications/      alertas
 ├── tests/              pruebas automatizadas (pytest)

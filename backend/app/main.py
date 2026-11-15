@@ -17,7 +17,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from .db import lectura
-from .rutas import asistente, auth, datos, pronostico
+from .rutas import alertas, asistente, auth, datos, monitoreo, pronostico
 
 log = logging.getLogger("faro.api")
 
@@ -75,3 +75,5 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(datos.router, prefix="/api")
 app.include_router(pronostico.router, prefix="/api")
 app.include_router(asistente.router, prefix="/api")
+app.include_router(alertas.router, prefix="/api")
+app.include_router(monitoreo.router, prefix="/api")

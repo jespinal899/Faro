@@ -115,3 +115,16 @@ De las **32 reglas de calidad** evaluadas, **ninguna** reporta un problema de da
 informativos (H06–H09) tienen explicación de negocio y quedan documentados. Aun así, el ETL
 (Fase 3) **volverá a validar estas reglas en cada carga**, porque los datos nuevos que lleguen
 a la fuente pueden no cumplirlas.
+
+## 7. Estado al cierre del proyecto
+
+| Preguntas | Estado | Dónde |
+|---|---|---|
+| P01 a P07 | ✅ Respondidas | Dashboard (KPI, tendencia, desgloses, filtro de ventas bajo costo) y asistente de IA |
+| P08 | 🟡 Parcial | El hecho guarda la fecha de pedido y la de factura, consultables por SQL; no tiene vista en el dashboard y la entrega confirmada no se modeló |
+| P09 | ⬜ No implementada | Los pedidos sin factura (*backorders*) quedan fuera del grano elegido, que es la línea **facturada** (H06, D-15) |
+| P10 | ✅ | Pronóstico de 4 semanas por grupo ([modelo de ML](../modelos/modelo-ml.md)) |
+| P11 | ✅ | Asistente de IA ([asistente-ia.md](asistente-ia.md)) |
+| P12 a P14 | ✅ | Alertas ([alertas.md](alertas.md)) |
+
+La trazabilidad completa de los requerimientos está en [requerimientos.md](requerimientos.md).

@@ -41,3 +41,19 @@ La prueba de la fecha futura detectó que la regla de supervivencia elegía "la 
 mayor fecha de modificación": una versión vieja con fecha errónea le ganaba a la corregida,
 y el registro no salía de cuarentena. Se corrigió para que gane **la última versión
 extraída**, que es el estado actual de la fuente.
+
+## Pruebas agregadas en la segunda parte de la fase
+
+| Archivo | Qué se demuestra |
+|---|---|
+| `tests/test_zona_ready.py` | Una fila por línea de factura; medidas derivadas; grupo principal más específico; las ventas por grupo no se duplican (y se duplicarían sin el factor); nulos resueltos según su causa |
+| `tests/test_simulador.py` | El simulador avanza por días hábiles sin domingos; sus importes cumplen las reglas; el ETL carga lo simulado y lo identifica; la línea inválida termina en cuarentena |
+| `tests/test_roles.py` | El pipeline y el simulador funcionan con roles restringidos; cada rol tiene denegado lo que no le corresponde |
+
+Total del proyecto: **57 pruebas automáticas**.
+
+## Flujo completo con datos reales (entorno local)
+
+Dos días simulados (1 y 2 de junio de 2016, 156 pedidos facturados) y una ejecución
+incremental del ETL: **1 301 filas nuevas, 0 rechazadas, reconciliado**. Las 790 restantes
+son la ventana de solapamiento, descartadas por no tener cambios.

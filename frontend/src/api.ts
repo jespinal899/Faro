@@ -34,7 +34,7 @@ export function construirUrl(ruta: string, params?: Parametros): string {
 
 export async function pedir<T>(
   ruta: string,
-  opciones: { params?: Parametros; metodo?: "GET" | "POST"; cuerpo?: unknown; senal?: AbortSignal } = {},
+  opciones: { params?: Parametros; metodo?: "GET" | "POST" | "PATCH"; cuerpo?: unknown; senal?: AbortSignal } = {},
 ): Promise<T> {
   const { params, metodo = "GET", cuerpo, senal } = opciones;
   let respuesta: Response;

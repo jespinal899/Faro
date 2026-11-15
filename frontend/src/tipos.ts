@@ -267,3 +267,145 @@ export interface InfoAsistente {
   usadas_hoy: number;
   ejemplos: string[];
 }
+
+// ---------------------------------------------------------------- alertas (Fase 7)
+
+export type EstadoAlerta = "nueva" | "atendida" | "descartada" | "resuelta";
+export type Severidad = "advertencia" | "critica";
+
+export interface ResumenAlertas {
+  nuevas: number;
+  criticas_nuevas: number;
+  ultima_creada_en: string | null;
+}
+
+export interface Alerta {
+  alerta_id: number;
+  creada_en: string;
+  regla: string;
+  regla_nombre: string;
+  severidad: Severidad;
+  origen: "regla" | "modelo";
+  indicador: string;
+  entidad: string;
+  /** Valor real o, en las alertas del modelo, la predicción. */
+  valor_observado: number;
+  umbral: number;
+  referencia: number | null;
+  unidad: string;
+  periodo_desde: string;
+  periodo_hasta: string;
+  detalle: Record<string, unknown>;
+  /** Descripción calculada por la regla (no la escribe la IA). */
+  mensaje: string;
+  /** GENERADA POR IA: se muestra identificada como tal. */
+  explicacion_ia: string | null;
+  accion_recomendada_ia: string | null;
+  ia_modelo: string | null;
+  incluye_simulados: boolean;
+  estado: EstadoAlerta;
+  estado_actualizado_en: string | null;
+  estado_actualizado_por: string | null;
+  nota: string | null;
+  correo_enviado: boolean;
+  intentos_correo: number;
+  ultimo_intento: string | null;
+}
+
+export interface EnvioAlerta {
+  canal: string;
+  intento: number;
+  intentado_en: string;
+  resultado: "enviado" | "fallido";
+  error: string | null;
+}
+
+export interface DetalleAlerta extends Alerta {
+  envios: EnvioAlerta[];
+}
+
+// ---------------------------------------------------------------- monitoreo (Fase 7)
+
+export interface EjecucionEtl {
+  ejecucion_id: number;
+  proceso: string;
+  disparador: string;
+  modo: string;
+  inicio: string;
+  fin: string | null;
+  segundos: number | null;
+  estado: string;
+  leidas: number;
+  nuevas: number;
+  actualizadas: number;
+  rechazadas: number;
+  sin_cambios: number;
+  reconciliado: boolean | null;
+  error: string | null;
+}
+
+export interface ReglaCalidad {
+  tabla: string;
+  regla: string;
+  dimension: string | null;
+  descripcion: string | null;
+  accion: string;
+  evaluadas: number;
+  fallaron: number;
+}
+
+export interface DimensionCalidad {
+  dimension: string;
+  reglas: number;
+  evaluadas: number;
+  fallaron: number;
+  cumplimiento_pct: number | null;
+}
+
+export interface CuarentenaPendiente {
+  tabla: string;
+  regla: string;
+  pendientes: number;
+  resueltos: number;
+  ultimo_rechazo: string | null;
+}
+
+export interface ModeloVigente {
+  version: string;
+  algoritmo: string;
+  entrenado_en: string;
+  datos_hasta: string;
+  commit_codigo: string | null;
+  wape_prueba: number | null;
+  wape_prueba_linea_base: number | null;
+  pronostico_origen: string | null;
+  pronostico_generado_en: string | null;
+}
+
+export interface EvaluacionAlertas {
+  evaluacion_id: number;
+  disparador: string;
+  inicio: string;
+  fin: string | null;
+  estado: string;
+  reglas_evaluadas: number;
+  alertas_nuevas: number;
+  correos_enviados: number;
+  error: string | null;
+}
+
+export interface RespuestaMonitoreo {
+  etl: EjecucionEtl[];
+  calidad_ejecucion_id: number | null;
+  calidad: ReglaCalidad[];
+  dimensiones: DimensionCalidad[];
+  cuarentena: CuarentenaPendiente[];
+  modelo: ModeloVigente | null;
+  notificaciones: {
+    evaluaciones: EvaluacionAlertas[];
+    alertas_por_estado: Partial<Record<EstadoAlerta, number>>;
+    correos_enviados: number;
+    intentos_fallidos: number;
+    alertas_sin_entregar: number;
+  };
+}

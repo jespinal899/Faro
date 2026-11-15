@@ -190,6 +190,18 @@ def test_reejecutar_no_cambia_el_dw(bases):
     assert sql(dw, "SELECT * FROM dw.dim_cliente ORDER BY cliente_key") == dimensiones
 
 
+def test_dw_vacio_se_carga_completo_aunque_la_ejecucion_sea_incremental(bases):
+    """Primer despliegue: el staging ya tiene ventas de lotes anteriores y el DW está vacío."""
+    _, dw = bases
+    lineas = uno(dw, "SELECT count(*) FROM stg_ready.ventas")
+    sql(dw, "DELETE FROM dw.fact_ventas")
+
+    r = _correr(bases)  # incremental: no hay cambios nuevos en la fuente
+
+    assert (r.dw_hechos_nuevos, r.reconciliado) == (lineas, True)
+    assert uno(dw, "SELECT count(*) FROM dw.fact_ventas") == lineas
+
+
 def test_validacion_completa_del_dw(bases):
     import psycopg
 

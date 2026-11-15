@@ -372,7 +372,12 @@ def cargar_dw(dst: psycopg.Connection, batch_id: int, inicial: bool) -> Resultad
         res.dimensiones[d.tabla] = _cargar_scd2(dst, d, batch_id, reloj.isoformat())
     res.dimensiones["dw.puente_producto_grupo"] = _cargar_puente(dst)
 
-    res.hechos_nuevos, res.hechos_actualizados = _cargar_hechos(dst, batch_id, inicial)
+    # Con el DW vacío (primer despliegue o reconstrucción) se cargan todos los hechos aunque
+    # la ejecución sea incremental: el staging ya puede tener ventas de lotes anteriores.
+    dw_vacio = dst.execute("SELECT NOT EXISTS (SELECT 1 FROM dw.fact_ventas)").fetchone()[0]
+    res.hechos_nuevos, res.hechos_actualizados = _cargar_hechos(
+        dst, batch_id, todo=inicial or dw_vacio
+    )
     res.hechos_con_desconocido = dst.execute(
         "SELECT count(*) FROM dw.fact_ventas WHERE -1 IN (" + ", ".join(CLAVES_HECHO) + ")"
     ).fetchone()[0]

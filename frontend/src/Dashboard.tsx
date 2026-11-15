@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Col, Layout, Row, Typography } from "antd";
+import { Col, Layout, Row, Tabs, Typography } from "antd";
+import { BarChartOutlined, LineChartOutlined } from "@ant-design/icons";
 import { useApi } from "./hooks/useApi";
 import { aParametros, FILTRO_DE_DIMENSION, FILTROS_INICIALES, periodoPorDefecto, type Etiquetas, type EstadoFiltros } from "./filtros";
 import type { Modo } from "./tema";
@@ -9,6 +10,7 @@ import DetalleFactura from "./componentes/DetalleFactura";
 import Encabezado from "./componentes/Encabezado";
 import GraficoDesglose from "./componentes/GraficoDesglose";
 import GraficoTendencia from "./componentes/GraficoTendencia";
+import PanelPronostico from "./componentes/PanelPronostico";
 import TablaFacturas from "./componentes/TablaFacturas";
 import TarjetasKpi from "./componentes/TarjetasKpi";
 
@@ -26,6 +28,7 @@ export default function Dashboard({ usuario, modo, onCambiarModo, onSalir }: Pro
   const [etiquetas, setEtiquetas] = useState<Etiquetas>({});
   const [inicializado, setInicializado] = useState(false);
   const [facturaAbierta, setFacturaAbierta] = useState<number | null>(null);
+  const [pestana, setPestana] = useState<"historico" | "pronostico">("historico");
 
   const porDefecto = useCallback(
     (): EstadoFiltros =>
@@ -61,33 +64,56 @@ export default function Dashboard({ usuario, modo, onCambiarModo, onSalir }: Pro
     <Layout className="app">
       <Encabezado usuario={usuario} estado={estado.datos} modo={modo} onCambiarModo={onCambiarModo} onSalir={onSalir} />
       <Layout.Content className="contenido">
-        <BarraFiltros
-          filtros={filtros}
-          etiquetas={etiquetas}
-          opciones={opciones.datos}
-          onCambiar={cambiar}
-          onLimpiar={() => {
-            setFiltros(porDefecto());
-            setEtiquetas({});
-          }}
+        <Tabs
+          activeKey={pestana}
+          onChange={(k) => setPestana(k as "historico" | "pronostico")}
+          items={[
+            {
+              key: "historico",
+              label: "Análisis histórico",
+              icon: <BarChartOutlined />,
+              children: (
+                <div className="pestana">
+                  <BarraFiltros
+                    filtros={filtros}
+                    etiquetas={etiquetas}
+                    opciones={opciones.datos}
+                    onCambiar={cambiar}
+                    onLimpiar={() => {
+                      setFiltros(porDefecto());
+                      setEtiquetas({});
+                    }}
+                  />
+                  <TarjetasKpi datos={kpis.datos} cargando={kpis.cargando || !listo} error={kpis.error} reintentar={kpis.recargar} />
+                  {listo && (
+                    <>
+                      <Row gutter={[12, 12]}>
+                        <Col xs={24} xl={15}>
+                          <GraficoTendencia params={params} />
+                        </Col>
+                        <Col xs={24} xl={9}>
+                          <GraficoDesglose params={params} onFiltrar={filtrarDesde} />
+                        </Col>
+                      </Row>
+                      <TablaFacturas key={JSON.stringify(params)} params={params} onAbrir={setFacturaAbierta} />
+                    </>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: "pronostico",
+              label: "Pronóstico (predicción)",
+              icon: <LineChartOutlined />,
+              // Solo se pide a la API cuando se abre la pestaña
+              children: pestana === "pronostico" ? <PanelPronostico /> : null,
+            },
+          ]}
         />
-        <TarjetasKpi datos={kpis.datos} cargando={kpis.cargando || !listo} error={kpis.error} reintentar={kpis.recargar} />
-        {listo && (
-          <>
-            <Row gutter={[12, 12]}>
-              <Col xs={24} xl={15}>
-                <GraficoTendencia params={params} />
-              </Col>
-              <Col xs={24} xl={9}>
-                <GraficoDesglose params={params} onFiltrar={filtrarDesde} />
-              </Col>
-            </Row>
-            <TablaFacturas key={JSON.stringify(params)} params={params} onAbrir={setFacturaAbierta} />
-          </>
-        )}
         <Typography.Paragraph type="secondary" className="pie">
           Faro · Todos los indicadores provienen del Data Warehouse. Las ventas a partir del 1-jun-2016 son
-          <b> simuladas</b> para la demostración y se pueden excluir con el filtro «Incluir simulados».
+          <b> simuladas</b> para la demostración y se pueden excluir con el filtro «Incluir simulados». El pronóstico es una
+          <b> predicción</b> del modelo de Machine Learning, no un dato histórico.
         </Typography.Paragraph>
       </Layout.Content>
       <DetalleFactura facturaId={facturaAbierta} onCerrar={() => setFacturaAbierta(null)} />

@@ -20,6 +20,7 @@ load_dotenv()
 RAIZ = Path(__file__).resolve().parents[1]
 ESQUEMAS_FUENTE = sorted((RAIZ / "database" / "source").glob("*.sql"))
 ESQUEMAS_STAGING = sorted((RAIZ / "database" / "staging").glob("*.sql"))
+ESQUEMAS_DW = sorted((RAIZ / "database" / "data-warehouse").glob("*.sql"))
 DATOS = RAIZ / "tests" / "datos" / "fuente_minima.sql"
 
 
@@ -56,7 +57,7 @@ def bases():
         for archivo in ESQUEMAS_FUENTE[1:]:
             c.execute(archivo.read_text(encoding="utf-8"))
     with psycopg.connect(urls["analitica"]) as c:
-        for archivo in ESQUEMAS_STAGING:
+        for archivo in [*ESQUEMAS_STAGING, *ESQUEMAS_DW]:
             c.execute(archivo.read_text(encoding="utf-8"))
 
     yield Bases((urls["fuente"], urls["analitica"]))

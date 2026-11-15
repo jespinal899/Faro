@@ -210,6 +210,11 @@ def test_monitoreo_resume_etl_calidad_modelo_y_notificaciones(cliente, entorno):
     # La calidad es la de la última ejecución, agrupada por dimensión
     assert m["calidad_ejecucion_id"] == ultima["ejecucion_id"] and m["calidad"]
     assert sum(d["reglas"] for d in m["dimensiones"]) == len(m["calidad"])
+    # Lo que incumple se separa entre lo que va a cuarentena y lo que solo se marca
+    for d in m["dimensiones"]:
+        assert d["a_cuarentena"] + d["marcadas"] == d["fallaron"]
+    reglas_marca = [r for r in m["calidad"] if r["accion"] == "marcar"]
+    assert sum(d["marcadas"] for d in m["dimensiones"]) == sum(r["fallaron"] for r in reglas_marca)
     assert all(
         d["cumplimiento_pct"] is None or 0 <= d["cumplimiento_pct"] <= 100 for d in m["dimensiones"]
     )

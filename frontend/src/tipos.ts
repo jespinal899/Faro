@@ -359,6 +359,10 @@ export interface DimensionCalidad {
   reglas: number;
   evaluadas: number;
   fallaron: number;
+  /** No entran al DW hasta corregirse. */
+  a_cuarentena: number;
+  /** Entran al DW con una marca (p. ej. atípicos). */
+  marcadas: number;
   cumplimiento_pct: number | null;
 }
 

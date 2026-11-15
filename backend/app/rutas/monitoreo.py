@@ -53,6 +53,10 @@ class DimensionCalidad(BaseModel):
     reglas: int
     evaluadas: int
     fallaron: int
+    a_cuarentena: int
+    """Filas que incumplen una regla de cuarentena (no entran al DW hasta corregirse)."""
+    marcadas: int
+    """Filas que incumplen una regla de marca (entran al DW marcadas, p. ej. atípicos)."""
     cumplimiento_pct: float | None
     """Porcentaje de filas evaluadas que cumplen; None si no se evaluó ninguna."""
 
@@ -116,12 +120,15 @@ def _dimensiones(reglas: list[ReglaCalidad]) -> list[DimensionCalidad]:
     for nombre, rs in sorted(grupos.items()):
         evaluadas = sum(r.evaluadas for r in rs)
         fallaron = sum(r.fallaron for r in rs)
+        a_cuarentena = sum(r.fallaron for r in rs if r.accion == "cuarentena")
         resultado.append(
             DimensionCalidad(
                 dimension=nombre,
                 reglas=len(rs),
                 evaluadas=evaluadas,
                 fallaron=fallaron,
+                a_cuarentena=a_cuarentena,
+                marcadas=fallaron - a_cuarentena,
                 cumplimiento_pct=100 * (1 - fallaron / evaluadas) if evaluadas else None,
             )
         )

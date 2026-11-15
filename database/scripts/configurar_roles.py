@@ -10,6 +10,7 @@ Cada ejecución ROTA las contraseñas. Nunca se imprimen ni se guardan en el rep
 Uso:
     uv run python database/scripts/configurar_roles.py --entorno neon
     uv run python database/scripts/configurar_roles.py --entorno local
+    uv run python database/scripts/configurar_roles.py --entorno neon --rol faro_api
 
 Después, en producción, subir las conexiones nuevas a GitHub (ver el README).
 """
@@ -42,12 +43,19 @@ ROLES = {
     "etl_lector": ("fuente", "ETL_SOURCE_URL"),
     "wwi_app": ("fuente", "APP_SOURCE_URL"),
     "faro_etl": ("analitica", "ETL_ANALYTICS_URL"),
+    "faro_api": ("analitica", "API_ANALYTICS_URL"),
 }
+# La API corre en funciones serverless (muchas conexiones cortas): en Neon usa el pooler.
+# El ETL usa conexión directa (cargas masivas y transacciones largas).
+CON_POOLER = {"faro_api"}
 
 
 def _url_del_rol(url_dueno: str, rol: str, clave: str) -> str:
     partes = urlsplit(url_dueno)
     host = partes.netloc.rsplit("@", 1)[-1]
+    if rol in CON_POOLER and ".neon.tech" in host and "-pooler" not in host:
+        endpoint, resto = host.split(".", 1)  # ep-xxx.region... -> ep-xxx-pooler.region...
+        host = f"{endpoint}-pooler.{resto}"
     return urlunsplit(partes._replace(netloc=f"{rol}:{quote(clave, safe='')}@{host}"))
 
 
@@ -65,6 +73,12 @@ def _guardar_en_env(valores: dict[str, str]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Activa los roles de mínimo privilegio")
     parser.add_argument("--entorno", choices=ENTORNOS, required=True)
+    parser.add_argument(
+        "--rol",
+        choices=ROLES,
+        action="append",
+        help="configurar solo este rol (repetible). Por defecto, todos: rota todas las claves",
+    )
     args = parser.parse_args()
 
     load_dotenv(ENV)
@@ -79,7 +93,7 @@ def main() -> int:
         with psycopg.connect(url, connect_timeout=20) as conn:
             conn.execute((SEGURIDAD / f"roles_{base}.sql").read_text(encoding="utf-8"))
             for rol, (base_rol, variable) in ROLES.items():
-                if base_rol != base:
+                if base_rol != base or (args.rol and rol not in args.rol):
                     continue
                 clave = secrets.token_urlsafe(24)
                 conn.execute(

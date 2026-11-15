@@ -5,7 +5,8 @@
 #   - Manualmente desde la pestaña Actions ("Run workflow").
 #
 # Qué hace:
-#   1. Aplica database/source/01_esquema_fuente.sql en Neon, en UNA transacción.
+#   1. Aplica en Neon, cada uno en UNA transacción, el esquema de la fuente (wwi_oltp)
+#      y los esquemas de staging y auditoría (faro_analytics).
 #      El esquema es idempotente: re-aplicarlo no altera los datos existentes.
 #   2. Verifica el despliegue con las pruebas de integración contra Neon.
 #
@@ -19,6 +20,7 @@ on:
     branches: [main]
     paths:
       - "database/source/01_esquema_fuente.sql"
+      - "database/staging/**"
       - ".github/workflows/cd-neon.yml"
   workflow_dispatch:
 
@@ -75,4 +77,34 @@ jobs:
               SELECT 'sales.customers', count(*) FROM sales.customers UNION ALL
               SELECT 'warehouse.stock_items', count(*) FROM warehouse.stock_items" \
               | sed 's/^/| /; s/$/ |/'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  staging:
+    name: Desplegar staging y auditoría (faro_analytics)
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      NEON_ANALYTICS_DATABASE_URL: ${{ secrets.NEON_ANALYTICS_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verificar que existen las credenciales
+        run: |
+          test -n "$NEON_ANALYTICS_DATABASE_URL" || { echo "::error::Falta el secret NEON_ANALYTICS_DATABASE_URL"; exit 1; }
+
+      - name: Aplicar esquemas de staging en Neon (una transacción)
+        run: |
+          psql "$NEON_ANALYTICS_DATABASE_URL" -v ON_ERROR_STOP=1 --single-transaction -q             -c "SET client_min_messages TO warning"             $(ls database/staging/*.sql | sort | sed 's/^/-f /')
+
+      - name: Resumen del despliegue
+        run: |
+          {
+            echo "## Neon · faro_analytics: staging desplegado"
+            echo ""
+            echo "| Esquema | Tablas |"
+            echo "|---|---:|"
+            psql "$NEON_ANALYTICS_DATABASE_URL" -At -F ' | ' -c "
+              SELECT table_schema, count(*) FROM information_schema.tables
+              WHERE table_schema IN ('audit', 'stg_raw', 'stg_clean', 'stg_quarantine')
+              GROUP BY 1 ORDER BY 1" | sed 's/^/| /; s/$/ |/'
           } >> "$GITHUB_STEP_SUMMARY"

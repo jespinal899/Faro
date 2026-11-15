@@ -105,3 +105,18 @@ las herramientas y la verificación son las mismas; solo cambia el "dialecto" de
 | API con bases temporales y rol `faro_api` | Cifras iguales a SQL independiente, registro sin la respuesta, sesión, validación, sin clave, límite por usuario, sin saldo | [tests/test_api_asistente.py](../../tests/test_api_asistente.py) (6) |
 | Dashboard | Aviso de IA, secciones con citas y "sin respaldo", contexto de seguimiento, límite, sin configurar | [PanelAsistente.test.tsx](../../frontend/src/componentes/PanelAsistente.test.tsx) (5) |
 | **Evaluación con el modelo real** | 14 preguntas: resultado esperado por SQL independiente, respaldo, respuesta obtenida y afirmaciones no verificadas | [generative-ai/evaluar_asistente.py](../../generative-ai/evaluar_asistente.py) → `documentation/pruebas/pruebas-asistente-*.md` |
+
+### Resultado de la evaluación con el modelo real (Groq, `openai/gpt-oss-120b`)
+
+| Entorno | Pasan | Afirmaciones no verificadas | Costo | Reporte |
+|---|---:|---:|---:|---|
+| Local | **14 de 14** | **0** | US$0 | [pruebas-asistente-local.md](../pruebas/pruebas-asistente-local.md) |
+| Neon (producción) | **14 de 14** | **0** | US$0 | [pruebas-asistente-neon.md](../pruebas/pruebas-asistente-neon.md) |
+
+- **Cifras exactas:** las respuestas usan las mismas cifras que el SQL independiente, por ejemplo 2015 con USD 53,991,490 y +8.1 %.
+- **Sin datos o fuera de alcance:** los 3 casos sin datos (2012, "canal online", datos de un cliente) y el intento de manipulación se responden como `sin_datos` o `fuera_de_alcance`, sin inventar cifras.
+- **Pregunta ambigua:** "¿Cómo vamos?" se responde declarando el período que asume.
+- **Correcciones durante el desarrollo:**
+  - El caso A08 se corrigió porque el chequeo era demasiado estrecho: el asistente daba el total de las 4 semanas y el chequeo solo aceptaba la primera semana.
+  - Un "80 %" tomado de una nota del resultado figuraba como no verificado porque el evaluador solo leía campos numéricos.
+- **Prueba de punta a punta:** con un navegador real hace una pregunta de ejemplo y verifica que la respuesta cite su consulta. Ver la [captura](../capturas/08-asistente.png).

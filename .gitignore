@@ -16,6 +16,9 @@ __pycache__/
 # ===== Node / Frontend =====
 node_modules/
 dist/
+# Resultados de Playwright (trazas y capturas de fallos)
+test-results/
+playwright-report/
 build/
 
 # ===== Datos y artefactos pesados =====

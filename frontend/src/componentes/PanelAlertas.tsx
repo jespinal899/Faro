@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Alert, Badge, Button, Card, Descriptions, Drawer, Input, Segmented, Select, Space, Table, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Card, Descriptions, Drawer, Input, Segmented, Select, Space, Table, Tag, Tooltip, Typography } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -14,7 +14,7 @@ import {
 import { pedir } from "../api";
 import { useApi } from "../hooks/useApi";
 import { useIntervalo } from "../hooks/useIntervalo";
-import { fFecha, fFechaHora, fMoneda, fPorcentaje, fSemana } from "../formato";
+import { fFecha, fFechaHora, fMoneda, fMonedaDecimal, fPorcentaje, fSemana } from "../formato";
 import type { Alerta, DetalleAlerta, EstadoAlerta, Severidad } from "../tipos";
 import { Cargando, ErrorCarga, SinDatos } from "./Estados";
 
@@ -93,7 +93,8 @@ function filasDetalle(d: Record<string, unknown>): { etiqueta: string; valor: st
     semanas_bajo_umbral: ["Semanas bajo el umbral", lista],
     lineas: ["Líneas vendidas bajo costo", String],
     facturas: ["Facturas", String],
-    venta_neta: ["Venta neta de esas líneas", (v) => fMoneda(Number(v))],
+    // Con centavos: es la cifra exacta que cita el mensaje calculado
+    venta_neta: ["Venta neta de esas líneas", (v) => fMonedaDecimal(Number(v))],
   };
   return Object.entries(d).map(([clave, valor]) => {
     const c = conocidos[clave];
@@ -320,7 +321,7 @@ export default function PanelAlertas({ onCambio }: Props) {
           onChange={setFiltro}
           style={{ marginBottom: 12 }}
           options={[
-            { value: "nuevas", label: <Badge count={cuenta("nuevas")} size="small" offset={[8, -2]}>Nuevas</Badge> },
+            { value: "nuevas", label: `Nuevas (${cuenta("nuevas")})` },
             { value: "seguimiento", label: `Atendidas (${cuenta("seguimiento")})` },
             { value: "cerradas", label: `Cerradas (${cuenta("cerradas")})` },
             { value: "todas", label: `Todas (${alertas.length})` },

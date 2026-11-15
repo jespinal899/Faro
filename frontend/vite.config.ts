@@ -12,6 +12,8 @@ export default defineConfig({
   preview: { port: 4173, proxy: api },
   build: {
     outDir: "dist",
+    // Ant Design (~370 KB gzip) y ECharts (~190 KB gzip) van en archivos propios y quedan en caché
+    chunkSizeWarningLimit: 1300,
     rollupOptions: {
       output: {
         // Bibliotecas grandes en archivos aparte: el navegador las guarda en caché

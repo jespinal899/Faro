@@ -299,12 +299,42 @@ Estado: **Aceptada**, **Pendiente** o **Reemplazada**.
   consultarán periódicamente (*polling*), lo que la guía permite. Las consultas deben
   responder en pocos segundos: medidas en < 1 s con los datos completos.
 
+## D-23 · Dashboard web: tecnología y reglas de visualización
+
+- **Estado:** Aceptada (2026-11-15)
+- **Decisión:**
+  - **React 19 + Vite + TypeScript** (estricto), componentes de **Ant Design 6** (tablas,
+    filtros, modo oscuro, textos en español) y gráficos con **Apache ECharts 6** importando
+    solo los módulos usados.
+  - Reglas de visualización:
+    - **un solo eje** por gráfico;
+    - período actual contra el **año anterior** (línea discontinua) con leyenda;
+    - paleta validada para daltonismo con su propia versión en **modo oscuro**;
+    - la variación de los KPI se muestra con **flecha y texto**, no solo con color;
+    - cada gráfico tiene una **vista de tabla**;
+    - los períodos que el rango cubre solo en parte se marcan con `*`.
+  - **Drill-down:**
+    - clic en una barra o fila del desglose = filtro por ese valor;
+    - clic en una factura = detalle por línea.
+  - Los datos **simulados** se señalan en el encabezado y en cada factura, y se pueden excluir.
+- **Alternativas consideradas:**
+  - Angular: la guía lo admite, pero es más pesado para un solo desarrollador.
+  - Recharts: menos opciones de zoom y de accesibilidad que ECharts.
+  - Power BI o Superset: no se publican gratis con el inicio de sesión propio de la API.
+- **Consecuencias:**
+  - TypeScript se queda en la 6.0 porque `typescript-eslint` aún no admite la 7.
+  - El sitio pesa unos 560 KB comprimidos, la mayor parte Ant Design y ECharts; van en archivos separados que el navegador guarda en caché.
+- **Evidencia:**
+  - 23 pruebas unitarias (Vitest) en el CI.
+  - Una prueba E2E con Playwright que recorre el flujo completo y genera las
+    [capturas](../capturas/).
+
 ---
 
 ## Pendientes
 
 | Tema | Fase |
 |---|---|
-| Roles `faro_api` y `faro_ia` | 5 y 6 |
+| Rol `faro_ia` | 6 |
 | Modelo de ML y proveedor de IA generativa | 6 |
 | Canales de notificación | 7 |

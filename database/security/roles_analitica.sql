@@ -5,7 +5,10 @@
 --   faro_etl : lo usa el pipeline. Lee y escribe DATOS en staging, auditoría y DW, pero no
 --              puede crear, alterar ni borrar tablas (la estructura solo cambia por el CD).
 --
--- Los roles de la API (faro_api) y del asistente de IA (faro_ia) se agregan con sus fases.
+--   faro_api : la API del dashboard (solo vistas aprobadas del esquema api).
+--   faro_ml  : el pronóstico (lee la serie de ml y escribe modelos y predicciones).
+--
+-- El rol del asistente de IA (faro_ia) se agrega con su fase.
 -- Contraseñas: database/scripts/configurar_roles.py (nunca en el repositorio).
 -- =====================================================================
 
@@ -53,3 +56,25 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA api GRANT SELECT ON TABLES TO faro_api;
 GRANT SELECT ON app.usuario TO faro_api;
 -- Solo puede actualizar el control de intentos y el último acceso (no contraseñas ni roles)
 GRANT UPDATE (intentos_fallidos, bloqueado_hasta, ultimo_acceso) ON app.usuario TO faro_api;
+
+-- ---------------------------------------------------------------------
+-- faro_ml : entrena el modelo y genera los pronósticos (workflow "ML - Pronóstico").
+--           Lee SOLO la serie de entrada (vista ml.ventas_semanales, no el DW) y escribe el
+--           registro de modelos, la evaluación y las predicciones. No puede borrar pronósticos.
+-- ---------------------------------------------------------------------
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'faro_ml') THEN
+        CREATE ROLE faro_ml NOLOGIN;
+    END IF;
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO faro_ml', current_database());
+END;
+$$;
+
+GRANT USAGE ON SCHEMA ml TO faro_ml;
+GRANT SELECT ON ml.ventas_semanales TO faro_ml;
+GRANT SELECT, INSERT ON ml.modelo, ml.prediccion_prueba, ml.pronostico TO faro_ml;
+-- Marcar cuál versión es la vigente, y regenerar el pronóstico de un mismo origen
+GRANT UPDATE (es_vigente) ON ml.modelo TO faro_ml;
+GRANT UPDATE (venta_neta_pronosticada, inferior, superior, usa_datos_simulados, generado_en)
+    ON ml.pronostico TO faro_ml;

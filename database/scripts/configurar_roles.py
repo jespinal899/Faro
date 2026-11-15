@@ -44,6 +44,7 @@ ROLES = {
     "wwi_app": ("fuente", "APP_SOURCE_URL"),
     "faro_etl": ("analitica", "ETL_ANALYTICS_URL"),
     "faro_api": ("analitica", "API_ANALYTICS_URL"),
+    "faro_ml": ("analitica", "ML_ANALYTICS_URL"),
 }
 # La API corre en funciones serverless (muchas conexiones cortas): en Neon usa el pooler.
 # El ETL usa conexión directa (cargas masivas y transacciones largas).

@@ -1,6 +1,6 @@
 # Validación del Data Warehouse — local
 
-> Generado por `database/scripts/validar_dw.py` (2026-11-15 04:59 UTC). No editar a mano.
+> Generado por `database/scripts/validar_dw.py` (2026-11-15 05:04 UTC). No editar a mano.
 
 **Resultado:** ✅ TODOS LOS CONTROLES PASAN (11/11)
 

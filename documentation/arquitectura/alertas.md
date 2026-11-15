@@ -1,6 +1,6 @@
 # Alertas, automatización y notificaciones
 
-> Preguntas **P12 a P14** · decisión **D-26** · código en [notifications/](../../notifications/) ·
+> Preguntas **P12 a P14** · decisiones **D-26** y **D-27** · código en [notifications/](../../notifications/) ·
 > esquema en [08_alertas.sql](../../database/data-warehouse/08_alertas.sql)
 
 ## 1. Flujo de punta a punta
@@ -64,7 +64,7 @@ Si los datos incluyen ventas **simuladas**, la alerta lo indica (`incluye_simula
 | Canal | Implementación |
 |---|---|
 | Correo | Gmail por SMTP con TLS (puerto 587) y una **contraseña de aplicación**. Las credenciales son secrets de GitHub y nunca se imprimen ni se guardan en la base. |
-| Dashboard | Pestaña **Alertas**: lista, detalle y cambio de estado, con consulta periódica. Vercel no admite WebSockets (D-22), así que se usa *polling*. |
+| Dashboard | Pestaña **Alertas** con contador de nuevas en el título: lista filtrable por estado, detalle (con la explicación de IA identificada y cada intento de correo) y cambio de estado con nota. Vercel no admite WebSockets (D-22): el contador y la lista se consultan **cada minuto**, solo con la pestaña del navegador visible. |
 
 ## 5. Frecuencia y "tiempo real"
 
@@ -95,5 +95,26 @@ En local, la misma evaluación se ejecuta con `uv run python -m notifications ev
 | Sin notificaciones duplicadas | Dos evaluaciones del mismo evento: una alerta y un correo (`tests/test_alertas_base.py`) |
 | Reintentos y fallas de envío | Dos fallas y luego éxito, con espera creciente; un servidor caído deja la alerta pendiente y la siguiente evaluación la envía |
 | Registrar generación y entrega | `alerta.evaluacion` (también si falla) y `alerta.envio` (cada intento) |
-| Consultar detalle y estado | Vista `api.alertas`; la API cambia el estado, y el rol `faro_api` no puede tocar otros campos |
+| Consultar detalle y estado | API: lista, detalle con los envíos, cambio de estado con nota, 404 y 422, y sin sesión 401 (`tests/test_api_alertas.py`, con el rol `faro_api`, que no puede tocar otros campos). Dashboard: 6 pruebas del panel y 3 de la consulta periódica (Vitest) |
 | De punta a punta, con datos reales | Evaluación local: alerta de ventas bajo costo (30 líneas, USD 2,046 de pérdida) con explicación de IA y correo recibido; la segunda evaluación no la duplicó |
+| De punta a punta, en producción | 2026-11-15, workflow *Alertas - Evento simulado*: 8 días al 40 % → ETL → **alerta crítica de caída de ventas** (−60.7 %, semana del 06/06/2016, marcada como simulada) y alerta de ventas bajo costo (USD 648), ambas explicadas por IA y con correo entregado. La segunda evaluación: 0 nuevas, 2 ya registradas, 0 correos |
+| En el navegador (E2E) | Playwright abre la pestaña, el detalle, cambia el estado y lo reabre; abre la pestaña Operación. Capturas [09](../capturas/09-alertas.png), [10](../capturas/10-alerta-detalle.png) y [11](../capturas/11-operacion.png) |
+
+## 8. Monitoreo (pestaña Operación, D-27)
+
+La guía pide monitorear ejecuciones, fallas, rechazados, versión del modelo, notificaciones y
+calidad. La pestaña **Operación** del dashboard lo muestra, leído de vistas aprobadas
+([09_vistas_monitoreo.sql](../../database/data-warehouse/09_vistas_monitoreo.sql)): la API no ve
+la auditoría ni los registros rechazados, solo conteos y estados.
+
+| Qué muestra | De dónde |
+|---|---|
+| **Frescura:** verde si el ETL cargó en las últimas 2 horas, amarillo si no, rojo si la última ejecución falló (con la primera línea del error) | `api.monitoreo_etl` |
+| **Ejecuciones del ETL:** disparo (programado, manual, demo), leídas, nuevas, actualizadas, rechazadas, reconciliación y duración | `api.monitoreo_etl` |
+| **Calidad por dimensión** en la última ejecución: reglas, filas evaluadas, filas que van **a cuarentena** y filas solo **marcadas** (p. ej. atípicos, que sí se cargan) | `api.monitoreo_calidad` |
+| **Cuarentena pendiente** por tabla y regla | `api.monitoreo_cuarentena` |
+| **Modelo vigente:** versión, fecha de entrenamiento, error en prueba frente a la línea base y último pronóstico | `api.modelo_pronostico`, `api.pronostico` |
+| **Notificaciones:** alertas por estado, correos enviados, intentos fallidos, alertas sin entregar y últimas evaluaciones | `api.alertas`, `api.alertas_envios`, `api.alertas_evaluaciones` |
+
+Se actualiza cada minuto. Además, cada workflow deja su resumen en GitHub Actions y GitHub avisa por
+correo cuando un workflow falla.

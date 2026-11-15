@@ -37,7 +37,7 @@ Las decisiones técnicas y su justificación están en
 | 4. Data Warehouse | Modelo dimensional, cargas, SCD, reconciliación | ✅ Completa |
 | 5. BI | API, dashboard y publicación en Vercel | ✅ Completa |
 | 6. ML y GenAI | Pronóstico de ventas y asistente de IA | ✅ Completa |
-| 7. Automatización | Alertas y monitoreo | 🚧 En curso (alertas listas) |
+| 7. Automatización | Alertas y monitoreo | 🚧 Casi completa (falta un disparador programado fiable) |
 | 8. Integración | Pruebas end-to-end, despliegue, video | — |
 
 ### Documentación de diseño
@@ -49,8 +49,8 @@ Las decisiones técnicas y su justificación están en
 | [Modelo dimensional](documentation/modelos/modelo-dimensional.md) | Grano, esquema estrella, dimensiones, medidas, SCD y productos en varios grupos |
 | [Modelo de Machine Learning](documentation/modelos/modelo-ml.md) | Pronóstico semanal: problema, datos, variables, validación, líneas base, resultados, límites y experimentos |
 | [Asistente de IA](documentation/arquitectura/asistente-ia.md) | Arquitectura segura, herramientas, configuración, costo, límites y pruebas |
-| [Alertas y automatización](documentation/arquitectura/alertas.md) | Reglas, contenido, canales, frecuencia, duplicados, reintentos, estados y pruebas |
-| [Registro de decisiones](documentation/decisiones/registro-decisiones.md) | D-01 a D-26, con alternativas y justificación |
+| [Alertas y automatización](documentation/arquitectura/alertas.md) | Reglas, contenido, canales, frecuencia, duplicados, reintentos, estados, monitoreo y pruebas |
+| [Registro de decisiones](documentation/decisiones/registro-decisiones.md) | D-01 a D-27, con alternativas y justificación |
 
 ---
 
@@ -238,13 +238,17 @@ Se ingresa con el usuario `demo` y la contraseña `FARO_PASSWORD_DEMO` del `.env
 | Vista de tabla en cada gráfico, modo oscuro y diseño para móvil | Accesibilidad |
 | Pestaña **Pronóstico**: las 4 semanas siguientes por grupo, con rango del 80 %, calidad del modelo contra la línea base y evaluación en semanas que no vio | Identificada como **predicción**, no dato histórico |
 | Pestaña **Asistente (IA)**: preguntas en lenguaje natural respondidas con consultas controladas al DW | Cada cifra cita su consulta; predicciones e interpretaciones aparte |
+| Pestaña **Alertas**: lista con contador de nuevas, detalle y cambio de estado (atendida, descartada, resuelta) | Se actualiza cada minuto; la explicación de la IA va identificada |
+| Pestaña **Operación**: ejecuciones del ETL, calidad por dimensión, cuarentena, modelo vigente y notificaciones | Avisa si el ETL falló o lleva horas sin cargar |
 
 Capturas (las genera la prueba E2E): [inicio de sesión](documentation/capturas/01-inicio-sesion.png) ·
 [dashboard](documentation/capturas/02-dashboard.png) ·
 [filtros y drill-down](documentation/capturas/03-filtros-y-drill-down.png) ·
 [detalle de factura](documentation/capturas/04-detalle-factura.png) ·
 [modo oscuro](documentation/capturas/05-modo-oscuro.png) · [móvil](documentation/capturas/06-movil.png) ·
-[pronóstico](documentation/capturas/07-pronostico.png) · [asistente de IA](documentation/capturas/08-asistente.png).
+[pronóstico](documentation/capturas/07-pronostico.png) · [asistente de IA](documentation/capturas/08-asistente.png) ·
+[alertas](documentation/capturas/09-alertas.png) · [detalle de alerta](documentation/capturas/10-alerta-detalle.png) ·
+[operación](documentation/capturas/11-operacion.png).
 
 ## Producción (Vercel)
 
@@ -350,6 +354,8 @@ uv run python -m notifications prueba-correo          # verifica la cuenta de Gm
   `ALERTAS_DESTINO` en el `.env` y como secrets del environment `production`.
 - **Demostración:** *Actions → Alertas - Evento simulado* inserta días de baja venta
   (**simulados**), los carga y dispara la alerta de caída de ventas con su correo.
+- **Seguimiento:** en el dashboard, pestaña **Alertas** (detalle y estado) y pestaña **Operación**
+  (ETL, calidad, modelo y entregas).
 - Detalle en [alertas.md](documentation/arquitectura/alertas.md).
 
 ## Seguridad: roles de mínimo privilegio
